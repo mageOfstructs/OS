@@ -1,16 +1,17 @@
 [org 0x7c00]
 
+buf:
+  times 10 db 0
+
 ; stupid stack
 mov bp, 0x8000
 mov sp, bp
-mov bx, sp
+mov bx, buf
+mov cl, 0
 
 loop:
   mov ah, 0
   int 0x16
-  
-  mov ah, 0 ; remove the scancode thingy
-  push ax
   
   cmp al, 0x0A ; newline
   je endloop
@@ -18,22 +19,29 @@ loop:
   cmp al, 0x0D ; other newline
   je endloop
 
-  push ax
-  mov ah, 0x0e
-  int 0x10
-  pop ax
+  mov [bx], al
+  inc bx
+  inc cl
+
+  cmp cl, 9
+  je endloop
+  
+  ; push ax
+  ; mov ah, 0x0e
+  ; int 0x10
+  ; pop ax
   
   jmp loop
 endloop:
   push 0
   
-  push ax
-  mov ah, 0x0e
-  mov al, 'Z'
-  int 0x10
-  pop ax
+  ; push ax
+  ; mov ah, 0x0e
+  ; mov al, 'Z'
+  ; int 0x10
+  ; pop ax
 
-  sub bx, 1
+  mov bx, buf
   call stupid_strprt
 
 jmp $
@@ -46,14 +54,9 @@ strprt_loop:
   cmp al, 0
   je strprt_endloop
   int 0x10
-  sub bx,2
+  inc bx
   jmp strprt_loop
 strprt_endloop:
-  push ax
-  mov ah, 0x0e
-  mov al, 'Z'
-  int 0x10
-  pop ax
   ret
 
 times 510-($-$$) db 0
