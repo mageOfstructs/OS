@@ -21,3 +21,6 @@ zeroes.bin:
 
 OS.bin: everything.bin zeroes.bin
 	cat everything.bin zeroes.bin > "OS.bin"
+
+clean:
+	rm *.{bin,o}
