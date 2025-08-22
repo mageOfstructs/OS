@@ -1,6 +1,6 @@
 ; h1.asm
 ; Prints the alphabet in alternating cases
-; Author: Jason Puschnig
+; Author: mageOfStructs
 ; License: AGPL
 mov ah, 0x0e
 mov al, 'A'

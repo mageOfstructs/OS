@@ -1,3 +1,7 @@
+; h2.asm
+; prints an integer in human-readable form
+; Author: mageOfStructs
+; License: AGPL
 [org 0x7c00]
 
 hello:
