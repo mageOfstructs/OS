@@ -14,7 +14,7 @@ uint write_str(const char *str, volatile u16 *off) {
   return i;
 }
 
-uint write_int(int num, uint base, u16 *off) {
+uint write_int(long num, uint base, u16 *off) {
   uint ret = 0;
   if (num < 0) {
     put_char('-', off);
@@ -22,10 +22,11 @@ uint write_int(int num, uint base, u16 *off) {
     ret++;
   }
 
-  char buf[16] = {0};
-  uint buf_i = 14;
+#define MAX_DIGITS 16
+  char buf[MAX_DIGITS] = {0};
+  uint buf_i = MAX_DIGITS - 2;
   do {
-    char mod = num % base;
+    unsigned char mod = num % base;
     if (mod < 10)
       buf[buf_i] = (char)('0' + mod);
     else
@@ -33,15 +34,16 @@ uint write_int(int num, uint base, u16 *off) {
 
     num /= base;
     buf_i--;
-  } while (num > 0 && buf_i < 15); // handle the case where buf_i underflows
-  if (buf_i < 15)
+  } while (num > 0 &&
+           buf_i < MAX_DIGITS); // handle the case where buf_i underflows
+  if (buf_i < MAX_DIGITS)
     ret += write_str(buf + buf_i + 1, off + ret);
   else
     ret += write_str("inf", off + ret);
   return ret;
 }
 
-uint write_int10(int num, u16 *off) { return write_int(num, 10, off); }
+uint write_int10(long num, u16 *off) { return write_int(num, 10, off); }
 
 uint write_ptr(ptr_t ptr, u16 *off) {
   put_char('0', off);
@@ -50,7 +52,7 @@ uint write_ptr(ptr_t ptr, u16 *off) {
 }
 
 uint write_float(double d, u16 *off) {
-  uint ret = write_int10((int)d, off);
+  uint ret = write_int10((long)d, off);
   put_char('.', off + ret);
   u32 decimal_part = 0;
   do {
