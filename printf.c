@@ -5,7 +5,7 @@
 
 void put_char(char c, volatile u16 *off) { *off = ((u16)c) | VMEM_COL_WHITE; }
 
-uint write_str(char *str, volatile u16 *off) {
+uint write_str(const char *str, volatile u16 *off) {
   uint i = 0;
   while (str[i]) {
     put_char(str[i], off + i);
@@ -14,28 +14,31 @@ uint write_str(char *str, volatile u16 *off) {
   return i;
 }
 
-uint write_int(u32 num, uint base, u16 *off) {
+uint write_int(int num, uint base, u16 *off) {
   uint ret = 0;
   if (num < 0) {
     put_char('-', off);
     num = -num;
     ret++;
   }
-  // prtint(num, base, off);
-  // do {
-  //   uint mod = num % base;
-  //   if (mod < 10)
-  //     put_char('0' + mod, off + ret);
-  //   else
-  //     put_char('a' + mod - 10, off + ret);
-  //
-  //   num /= base;
-  //   ret++;
-  // } while (num > 0);
+
+  char buf[16] = {0};
+  uint buf_i = 14;
+  do {
+    char mod = num % base;
+    if (mod < 10)
+      buf[buf_i] = (char)('0' + mod);
+    else
+      buf[buf_i] = (char)('a' + mod);
+
+    num /= base;
+    buf_i--;
+  } while (num > 0);
+  write_str(buf + buf_i + 1, off + ret);
   return ret;
 }
 
-uint write_int10(u32 num, u16 *off) { return write_int(num, 10, off); }
+uint write_int10(int num, u16 *off) { return write_int(num, 10, off); }
 
 uint write_ptr(ptr_t ptr, u16 *off) {
   put_char('0', off);
@@ -61,7 +64,6 @@ char handle_stage1(u16 **cursor, va_list *args, char format_char) {
     break;
   case 'd':
     *cursor += write_int10(va_arg(*args, int), *cursor);
-    return 0;
     break;
   case 'p':
     *cursor += write_ptr(va_arg(*args, ptr_t), *cursor);
@@ -84,7 +86,6 @@ int printf(const char *format, ...) {
   uint i = 0;
   char stage = 0;
   while (format[i]) {
-    // put_char(',', cursor++);
     if (stage == 1) {
       stage += handle_stage1(&cursor, &args, format[i]);
       goto loopend;
