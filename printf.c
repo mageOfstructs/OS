@@ -1,20 +1,11 @@
+#include "printf.h"
 #include <stdarg.h>
 
-#define uint unsigned long
-#define u16 unsigned short
-#define u32 unsigned long
+// extern void prtint(u32 num, u32 base, u16 *off);
 
-// might change in the future (64bit anyone?)
-#define ptr_t unsigned long
+void put_char(char c, volatile u16 *off) { *off = ((u16)c) | VMEM_COL_WHITE; }
 
-#define VMEM_START 0xb8000
-#define VMEM_COL_WHITE (15 << 8)
-
-extern void prtint(u32 num, u32 base, u16 *off);
-
-void put_char(char c, u16 *off) { *off = ((u16)c) | VMEM_COL_WHITE; }
-
-uint write_str(char *str, u16 *off) {
+uint write_str(char *str, volatile u16 *off) {
   uint i = 0;
   while (str[i]) {
     put_char(str[i], off + i);
@@ -30,7 +21,7 @@ uint write_int(u32 num, uint base, u16 *off) {
     num = -num;
     ret++;
   }
-  prtint(num, base, off);
+  // prtint(num, base, off);
   // do {
   //   uint mod = num % base;
   //   if (mod < 10)
@@ -63,20 +54,20 @@ uint write_float(double d, u16 *off) {
   return ret + 1 + write_int10(decimal_part, off + ret + 1);
 }
 
-char handle_stage1(u16 **cursor, va_list args, char format_char) {
+char handle_stage1(u16 **cursor, va_list *args, char format_char) {
   switch (format_char) {
   case 's':
-    *cursor += write_str(va_arg(args, char *), *cursor);
+    *cursor += write_str(va_arg(*args, char *), *cursor);
     break;
   case 'd':
-    *cursor += write_int10(va_arg(args, int), *cursor);
+    *cursor += write_int10(va_arg(*args, int), *cursor);
     return 0;
     break;
   case 'p':
-    *cursor += write_ptr(va_arg(args, ptr_t), *cursor);
+    *cursor += write_ptr(va_arg(*args, ptr_t), *cursor);
     break;
   case 'f':
-    *cursor += write_float(va_arg(args, double), *cursor);
+    *cursor += write_float(va_arg(*args, double), *cursor);
     break;
   }
   return -1; // reset stage; in the future we might have more stages (e.g.
@@ -93,8 +84,9 @@ int printf(const char *format, ...) {
   uint i = 0;
   char stage = 0;
   while (format[i]) {
+    // put_char(',', cursor++);
     if (stage == 1) {
-      stage += handle_stage1(&cursor, args, format[i]);
+      stage += handle_stage1(&cursor, &args, format[i]);
       goto loopend;
     }
     switch (format[i]) {
