@@ -29,12 +29,15 @@ uint write_int(int num, uint base, u16 *off) {
     if (mod < 10)
       buf[buf_i] = (char)('0' + mod);
     else
-      buf[buf_i] = (char)('a' + mod);
+      buf[buf_i] = (char)('a' + mod - 10);
 
     num /= base;
     buf_i--;
-  } while (num > 0);
-  write_str(buf + buf_i + 1, off + ret);
+  } while (num > 0 && buf_i < 15); // handle the case where buf_i underflows
+  if (buf_i < 15)
+    ret += write_str(buf + buf_i + 1, off + ret);
+  else
+    ret += write_str("inf", off + ret);
   return ret;
 }
 
@@ -47,7 +50,7 @@ uint write_ptr(ptr_t ptr, u16 *off) {
 }
 
 uint write_float(double d, u16 *off) {
-  uint ret = write_int10((u32)d, off);
+  uint ret = write_int10((int)d, off);
   put_char('.', off + ret);
   u32 decimal_part = 0;
   do {
