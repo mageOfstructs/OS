@@ -7,7 +7,8 @@ int main() {
   char *test = "Test";
   int asdf = 43;
   // printf("%s %s %s", test, "asdf", "fdas");
-  printf("test\ntest");
+  printf("test\n");
+  printf("test2");
   // printf("%s %d", test, asdf);
   // printf("%p", &asdf);
   // write_str("Tessssssssssssssssssssssssssssssssssssssssssssssst",

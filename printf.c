@@ -82,13 +82,16 @@ char handle_stage1(u16 **cursor, va_list *args, char format_char) {
              // padding, floats, etc.)
 }
 
+static u16 *last_cursor_pos = VMEM_START;
 #pragma GCC diagnostic ignored "-Wincompatible-library-redeclaration"
 int printf(const char *format, ...) {
-  static u16 *last_cursor_pos = VMEM_START;
+  if (!last_cursor_pos) { // I have no idea why this is, compilers are stupid
+    last_cursor_pos = VMEM_START;
+  }
   va_list args;
   va_start(args, format);
 
-  unsigned short *cursor = VMEM_START;
+  unsigned short *cursor = last_cursor_pos;
 
   uint i = 0;
   char stage = 0, cur_line = 0;
@@ -104,6 +107,7 @@ int printf(const char *format, ...) {
       break;
     case '\n':
       cursor += VGA_WIDTH - (cursor - VMEM_START) % VGA_WIDTH;
+      last_cursor_pos = cursor;
       break;
     case '\r':
       cursor = VMEM_START;
