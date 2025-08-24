@@ -1,5 +1,7 @@
 #ifndef PRINTF_H
 
+#define PRINTF_H
+
 #define uint unsigned long
 #define u16 unsigned short
 #define u32 unsigned long

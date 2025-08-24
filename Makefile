@@ -5,6 +5,8 @@ kernel.o:
 	i386-elf-gcc -ffreestanding -m32 -g -c "kernel.c" -o "kernel.o"
 printf.o:
 	i386-elf-gcc -ffreestanding -m32 -g -c "printf.c" -o "printf.o"
+cursor.o:
+	i386-elf-gcc -ffreestanding -m32 -g -c "cursor.c" -o "cursor.o" -masm=intel
 
 kernel_entry.o:
 	nasm "kernel_entry.asm" -f elf -o "kernel_entry.o"
@@ -15,8 +17,8 @@ utils.o:
 boot.bin:
 	nasm "boot.asm" -f bin -o boot.bin
 
-full_kernel.bin: kernel_entry.o kernel.o utils.o printf.o
-	i386-elf-ld -o "full_kernel.bin" -Ttext 0x1000 "kernel_entry.o" "kernel.o" "printf.o" --oformat binary
+full_kernel.bin: kernel_entry.o kernel.o printf.o cursor.o
+	i386-elf-ld -o "full_kernel.bin" -Ttext 0x1000 "kernel_entry.o" "kernel.o" "printf.o" "cursor.o" --oformat binary
 
 everything.bin: boot.bin full_kernel.bin
 	cat "boot.bin" "full_kernel.bin" > "everything.bin"

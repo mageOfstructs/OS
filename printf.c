@@ -1,4 +1,5 @@
 #include "printf.h"
+#include "cursor.h"
 #include <stdarg.h>
 
 // extern void prtint(u32 num, u32 base, u16 *off);
@@ -83,13 +84,15 @@ char handle_stage1(u16 **cursor, va_list *args, char format_char) {
 
 #pragma GCC diagnostic ignored "-Wincompatible-library-redeclaration"
 int printf(const char *format, ...) {
+  static u16 *last_cursor_pos = VMEM_START;
   va_list args;
   va_start(args, format);
 
-  unsigned short *cursor = (unsigned short *)VMEM_START;
+  unsigned short *cursor = VMEM_START;
 
   uint i = 0;
-  char stage = 0;
+  char stage = 0, cur_line = 0;
+  ;
   while (format[i]) {
     if (stage == 1) {
       stage += handle_stage1(&cursor, &args, format[i]);
@@ -98,6 +101,12 @@ int printf(const char *format, ...) {
     switch (format[i]) {
     case '%':
       stage++;
+      break;
+    case '\n':
+      cursor += VGA_WIDTH - (cursor - VMEM_START) % VGA_WIDTH;
+      break;
+    case '\r':
+      cursor = VMEM_START;
       break;
     default:
       put_char(format[i], cursor);
