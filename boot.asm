@@ -12,7 +12,7 @@ mov bp, 0x8000
 mov sp, bp
 
 mov bx, KERNEL_LOCATION
-mov dh, 4
+mov dh, 17 ; yikes
 
 mov ah, 0x02
 mov al, dh ; number of sectors to read, important

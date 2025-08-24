@@ -15,13 +15,8 @@ uint write_str(const char *str, volatile u16 *off) {
   return i;
 }
 
-uint write_int(long num, uint base, u16 *off) {
+uint write_uint(u32 num, uint base, u16 *off) {
   uint ret = 0;
-  if (num < 0) {
-    put_char('-', off);
-    num = -num;
-    ret++;
-  }
 
 #define MAX_DIGITS 16
   char buf[MAX_DIGITS] = {0};
@@ -43,13 +38,22 @@ uint write_int(long num, uint base, u16 *off) {
     ret += write_str("inf", off + ret);
   return ret;
 }
+uint write_int(long num, uint base, u16 *off) {
+  uint ret = 0;
+  if (num < 0) {
+    put_char('-', off);
+    num = -num;
+    ret++;
+  }
+  return ret + write_uint(num, base, off + ret);
+}
 
 uint write_int10(long num, u16 *off) { return write_int(num, 10, off); }
 
 uint write_ptr(ptr_t ptr, u16 *off) {
   put_char('0', off);
   put_char('x', off + 1);
-  return 2 + write_int(ptr, 16, off + 2);
+  return 2 + write_uint(ptr, 16, off + 2);
 }
 
 uint write_float(double d, u16 *off) {
