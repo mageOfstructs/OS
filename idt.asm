@@ -3,6 +3,7 @@ global setup_idt
 extern init_idt
 extern PIC_remap
 
+section .data
 IDT_start:
 ; initialize idt with all zeroes
 times 256 dd 0
@@ -15,6 +16,7 @@ IDT_descriptor:
 
 IDT_desc_ptr: dd IDT_descriptor
 
+section .text
 setup_idt:
   call init_idt
   ; mov eax, 0xB8000
