@@ -21,6 +21,7 @@ setup_idt:
   ; mov bl, [IDT_start+0x21*8+5]
   ; mov byte [eax], bl
   lidt [IDT_descriptor]
+  sti
 
   push 0x28 ; slave pic offset
   push 0x20 ; master pic offset
