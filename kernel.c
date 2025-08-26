@@ -1,5 +1,6 @@
 #include "idt.h"
 #include "printf.h"
+#include <stdint.h>
 
 int main() {
   idt_init();
@@ -10,8 +11,11 @@ int main() {
   // printf("%s %s %s", test, "asdf", "fdas");
   printf("test\n");
   printf("test2\n");
-  printf("test3\n");
-  asm("int 0x80");
+  uint32_t eip;
+  asm("mov %0, $" : "=r"(eip));
+  printf("cur eip: %p\n", eip);
+  // printf("test3\n");
+  asm("int 0x00");
   // asm volatile("int 0x00");
   // printf("test2");
   // printf("%s %d", test, asdf);
