@@ -1,5 +1,6 @@
 [org 0x7c00]                        
 KERNEL_LOCATION equ 0x1000
+KERNEL_SIZE equ 0
                                     
 
 mov [BOOT_DISK], dl                 
@@ -12,7 +13,7 @@ mov bp, 0x8000
 mov sp, bp
 
 mov bx, KERNEL_LOCATION
-mov dh, 4
+mov dh, KERNEL_SIZE 
 
 mov ah, 0x02
 mov al, dh ; number of sectors to read, important
