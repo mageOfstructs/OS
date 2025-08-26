@@ -1,26 +1,23 @@
+GCCFLAGS="-ffreestanding -m32 -g -c -masm=intel"
+NASMFLAGS="-f elf"
+
 qemu: OS.bin
-	qemu-system-x86_64 -drive format=raw,file="OS.bin",index=0,if=floppy -m 128M
-	
-kernel.o:
-	i386-elf-gcc -ffreestanding -m32 -g -c "kernel.c" -o "kernel.o"
-printf.o:
-	i386-elf-gcc -ffreestanding -m32 -g -c "printf.c" -o "printf.o"
-cursor.o:
-	i386-elf-gcc -ffreestanding -m32 -g -c "cursor.c" -o "cursor.o" -masm=intel
+	qemu-system-x86_64 -drive format=raw,file="$<",index=0,if=floppy -m 128M
 
-kernel_entry.o:
-	nasm "kernel_entry.asm" -f elf -o "kernel_entry.o"
+out/c_%.o: %.c
+	i386-elf-gcc $GCCFLAGS -c $< -o $@
+out/asm_%.o: %.asm
+	nasm $< $NASMFLAGS -o $@
 
-utils.o:
-	nasm "utils.asm" -f elf -o "utils.o"
-
-boot.bin:
+boot.bin: full_kernel.bin
+	kernel_size=$(shell bc <<< "$$(du $< | split -f1) / 512 + 1")
+	sed -Ei boot.asm -e "s/(KERNEL_SIZE equ )0/\1$kernel_size"
 	nasm "boot.asm" -f bin -o boot.bin
 
-full_kernel.bin: kernel_entry.o kernel.o printf.o cursor.o
+full_kernel.bin: out/%.o
 	i386-elf-ld -o "full_kernel.bin" -Ttext 0x1000 $^ --oformat binary
 
-everything.bin: boot.bin full_kernel.bin
+everything.bin: boot.bin
 	cat "boot.bin" "full_kernel.bin" > "everything.bin"
 
 zeroes.bin:
@@ -30,4 +27,7 @@ OS.bin: everything.bin zeroes.bin
 	cat everything.bin zeroes.bin > "OS.bin"
 
 clean:
-	rm *.{bin,o}
+	rm *.{bin,o} || true
+	rm out/*.{bin,o} || true
+
+.PHONY: clean qemu
