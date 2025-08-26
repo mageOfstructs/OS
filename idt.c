@@ -49,13 +49,15 @@ void idt_init() {
     idt_set_descriptor(vector, isr_stub_table[vector], 0x8E);
     vectors[vector] = true;
   }
+
+  // We use an imported *label* (isr_test) here. A label in asm is a very
+  // abstract concept, i.e. it doesn't leave any marks on the generated code by
+  // itself. It can be thought of as a pointer dereference here, so when we say
+  // isr_test, the assembler/compiler/whatever actually interprets this as the
+  // first couple bytes of that procedure. That's why we have to use the
+  // &-operator to refer to the label's *address*
   idt_set_descriptor(0x80, (uint32_t)&isr_test,
                      0x8E); // one of the most fundamental misunderstandings
-  // We import a *label* here. A label in asm is a where abstract concept, i.e.
-  // it doesn't leave any marks on the generated code. It can be thought of as a
-  // pointer dereference here, so when we say isr_test, the assembler actually
-  // interprets this as the first couple bytes where of that procedure. That's
-  // why we have to use the &-operator, or have it in a table like above.
 
   __asm__ volatile("lidt %0" : : "m"(idtr)); // load the new IDT
   __asm__ volatile("sti");                   // set the interrupt flag
