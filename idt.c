@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define IDT_MAX_DESCRIPTORS 32
+#define IDT_MAX_DESCRIPTORS 256
 
 typedef struct {
   uint16_t isr_low;   // The lower 16 bits of the ISR's address
@@ -23,8 +23,8 @@ typedef struct {
 
 static idtr_t idtr;
 
-void idt_set_descriptor(uint8_t vector, void *isr, uint8_t flags);
-void idt_set_descriptor(uint8_t vector, void *isr, uint8_t flags) {
+// void idt_set_descriptor(uint8_t vector, void *isr, uint8_t flags);
+void idt_set_descriptor(uint8_t vector, uint32_t isr, uint8_t flags) {
   idt_entry_t *descriptor = &idt[vector];
 
   descriptor->isr_low = (uint32_t)isr & 0xFFFF;
@@ -37,16 +37,25 @@ void idt_set_descriptor(uint8_t vector, void *isr, uint8_t flags) {
 
 static bool vectors[IDT_MAX_DESCRIPTORS];
 
-extern void *isr_stub_table[];
+extern uint32_t isr_stub_table[];
+
+extern uint32_t isr_test;
 
 void idt_init() {
   idtr.base = (uintptr_t)&idt[0];
   idtr.limit = (uint16_t)sizeof(idt_entry_t) * IDT_MAX_DESCRIPTORS - 1;
 
-  for (uint8_t vector = 0; vector < IDT_MAX_DESCRIPTORS; vector++) {
+  for (uint8_t vector = 0; vector < 32; vector++) {
     idt_set_descriptor(vector, isr_stub_table[vector], 0x8E);
     vectors[vector] = true;
   }
+  idt_set_descriptor(0x80, (uint32_t)&isr_test,
+                     0x8E); // one of the most fundamental misunderstandings
+  // We import a *label* here. A label in asm is a where abstract concept, i.e.
+  // it doesn't leave any marks on the generated code. It can be thought of as a
+  // pointer dereference here, so when we say isr_test, the assembler actually
+  // interprets this as the first couple bytes where of that procedure. That's
+  // why we have to use the &-operator, or have it in a table like above.
 
   __asm__ volatile("lidt %0" : : "m"(idtr)); // load the new IDT
   __asm__ volatile("sti");                   // set the interrupt flag
