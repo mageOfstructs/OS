@@ -1,6 +1,6 @@
 %macro isr_err_stub 1
 isr_stub_%+%1:
-    call exception_handler
+    call exception_handler_errcode
     iret 
 %endmacro
 
@@ -11,6 +11,7 @@ isr_stub_%+%1:
 %endmacro
 
 extern exception_handler
+extern exception_handler_errcode
 isr_no_err_stub 0
 isr_no_err_stub 1
 isr_no_err_stub 2
@@ -51,3 +52,8 @@ isr_stub_table:
     dd isr_stub_%+i ; use DQ instead if targeting 64-bit
 %assign i i+1 
 %endrep
+
+global isr_test
+isr_test:
+    mov byte [0xb8000], 'Q'
+    iret
