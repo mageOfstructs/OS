@@ -1,5 +1,6 @@
 %macro isr_err_stub 1
 isr_stub_%+%1:
+    push byte %1
     call exception_handler_errcode
     iret 
 %endmacro
@@ -57,3 +58,11 @@ global isr_test
 isr_test:
     mov byte [0xb8000], 'Q'
     iret
+
+global isr_keyboard
+extern keyboard_test
+isr_keyboard:
+  pushad
+  call keyboard_test
+  popad
+  iret

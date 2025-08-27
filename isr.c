@@ -1,18 +1,36 @@
+#include "pic.h"
 #include "printf.h"
 #include <stdint.h>
 
-__attribute__((noreturn)) void exception_handler(void);
-void exception_handler() {
-  printf("EXCEPTION!");
+typedef struct int_frame {
+  uint32_t eip;
+  uint32_t cs;
+  uint32_t eflags;
+} int_frame_t;
+
+__attribute__((noreturn)) void exception_handler(int_frame_t f);
+__attribute__((noreturn)) void
+exception_handler_errcode(uint8_t inum, uint32_t errcode, int_frame_t f);
+
+void exception_handler(int_frame_t f) {
+  printf("EXCEPTION!\n");
+  printf("EIP: %p; CS: %p; EFLAGS: %p\n", f.eip, f.cs, f.eflags);
   __asm__ volatile("cli; hlt; jmp $"); // Completely hangs the computer
   for (;;)
     ;
 }
 
-__attribute__((noreturn)) void exception_handler(void);
-void exception_handler_errcode(uint32_t errcode) {
-  printf("ERROR CODE: %d!", errcode);
+void exception_handler_errcode(uint8_t inum, uint32_t errcode, int_frame_t f) {
+  printf("%d\n", inum);
+  printf("EIP: %p; CS: %p; EFLAGS: %p\n", f.eip, f.cs, f.eflags);
+  printf("ERROR CODE: %p!\n", errcode);
   __asm__ volatile("cli; hlt; jmp $"); // Completely hangs the computer
-  for (;;)
-    ;
+}
+
+void keyboard_test() {
+  char key = get_key_pressed();
+  if (key) {
+    printf("%c", key);
+  }
+  PIC_sendEOI(1);
 }

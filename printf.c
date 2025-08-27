@@ -44,12 +44,18 @@ uint write_int(long num, uint base, u16 *off) {
   return ret;
 }
 
+uint write_uint(long num, u32 base, u16 *off) {
+  if (num < 0)
+    num = num * (-1);
+  return write_int(num, base, off);
+}
+
 uint write_int10(long num, u16 *off) { return write_int(num, 10, off); }
 
 uint write_ptr(ptr_t ptr, u16 *off) {
   put_char('0', off);
   put_char('x', off + 1);
-  return 2 + write_int(ptr, 16, off + 2);
+  return 2 + write_uint(ptr, 16, off + 2);
 }
 
 uint write_float(double d, u16 *off) {
@@ -71,11 +77,18 @@ char handle_stage1(u16 **cursor, va_list *args, char format_char) {
   case 'd':
     *cursor += write_int10(va_arg(*args, int), *cursor);
     break;
+  case 'u':
+    *cursor += write_uint(va_arg(*args, int), 10, *cursor);
+    break;
   case 'p':
     *cursor += write_ptr(va_arg(*args, ptr_t), *cursor);
     break;
   case 'f':
     *cursor += write_float(va_arg(*args, double), *cursor);
+    break;
+  case 'c':
+    put_char(va_arg(*args, int), *cursor);
+    *cursor += 1;
     break;
   }
   return -1; // reset stage; in the future we might have more stages (e.g.
@@ -107,7 +120,6 @@ int printf(const char *format, ...) {
       break;
     case '\n':
       cursor += VGA_WIDTH - (cursor - VMEM_START) % VGA_WIDTH;
-      last_cursor_pos = cursor;
       break;
     case '\r':
       cursor = VMEM_START;
@@ -120,5 +132,6 @@ int printf(const char *format, ...) {
     i++;
   }
   va_end(args);
+  last_cursor_pos = cursor;
   return 0;
 }

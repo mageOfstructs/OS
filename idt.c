@@ -3,6 +3,8 @@
 #include <stdint.h>
 
 #define IDT_MAX_DESCRIPTORS 256
+#define INT_TYPE_R0 0x8E
+#define TRAP_TYPE_R0 0x8F
 
 typedef struct {
   uint16_t isr_low;   // The lower 16 bits of the ISR's address
@@ -40,13 +42,14 @@ static bool vectors[IDT_MAX_DESCRIPTORS];
 extern uint32_t isr_stub_table[];
 
 extern uint32_t isr_test;
+extern uint32_t isr_keyboard;
 
 void idt_init() {
   idtr.base = (uintptr_t)&idt[0];
   idtr.limit = (uint16_t)sizeof(idt_entry_t) * IDT_MAX_DESCRIPTORS - 1;
 
   for (uint8_t vector = 0; vector < 32; vector++) {
-    idt_set_descriptor(vector, isr_stub_table[vector], 0x8E);
+    idt_set_descriptor(vector, isr_stub_table[vector], INT_TYPE_R0);
     vectors[vector] = true;
   }
 
@@ -56,8 +59,10 @@ void idt_init() {
   // isr_test, the assembler/compiler/whatever actually interprets this as the
   // first couple bytes of that procedure. That's why we have to use the
   // &-operator to refer to the label's *address*
-  idt_set_descriptor(0x80, (uint32_t)&isr_test,
-                     0x8E); // one of the most fundamental misunderstandings
+  idt_set_descriptor(
+      0x80, (uint32_t)&isr_test,
+      INT_TYPE_R0); // one of the most fundamental misunderstandings
+  idt_set_descriptor(0x21, (uint32_t)&isr_keyboard, INT_TYPE_R0);
 
   __asm__ volatile("lidt %0" : : "m"(idtr)); // load the new IDT
   __asm__ volatile("sti");                   // set the interrupt flag

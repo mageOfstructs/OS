@@ -1,19 +1,5 @@
 #include "cursor.h"
-#include "printf.h"
-
-void outb(u16 dev, char val) {
-  asm volatile("out dx, al" : : [dev] "d"(dev), [val] "a"(val));
-}
-
-char inb(u16 dev) {
-  char ret;
-  asm volatile("mov dx, %[dev]\n\t"
-               "in %0, dx\n\t"
-               // "mov %0, al"
-               : "=rm"(ret)
-               : [dev] "r"(dev));
-  return ret;
-}
+#include "io.h"
 
 uint16_t get_cursor_position(void) {
   uint16_t pos = 0;
