@@ -1,4 +1,5 @@
-#include <stdint.h>
+#include "io.h"
+
 inline void outb(uint16_t dev, char val) {
   asm volatile("out dx, al" : : [dev] "d"(dev), [val] "a"(val));
 }
@@ -13,6 +14,4 @@ inline char inb(uint16_t dev) {
   return ret;
 }
 
-inline void io_wait(void) {
-    outb(0x80, 0);
-}
+inline void io_wait(void) { outb(0x80, 0); }

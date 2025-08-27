@@ -59,10 +59,10 @@ void idt_init() {
   // isr_test, the assembler/compiler/whatever actually interprets this as the
   // first couple bytes of that procedure. That's why we have to use the
   // &-operator to refer to the label's *address*
-  idt_set_descriptor(0x80, (uint32_t)&isr_test,
-                     INT_TYPE_R0); // one of the most fundamental misunderstandings
-  idt_set_descriptor(0x21, (uint32_t)&isr_keyboard,
-                     INT_TYPE_R0);
+  idt_set_descriptor(
+      0x80, (uint32_t)&isr_test,
+      INT_TYPE_R0); // one of the most fundamental misunderstandings
+  idt_set_descriptor(0x21, (uint32_t)&isr_keyboard, INT_TYPE_R0);
 
   __asm__ volatile("lidt %0" : : "m"(idtr)); // load the new IDT
   __asm__ volatile("sti");                   // set the interrupt flag

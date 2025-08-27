@@ -1,5 +1,4 @@
 #include "cursor.h"
-#include "printf.h"
 #include "io.h"
 
 uint16_t get_cursor_position(void) {
