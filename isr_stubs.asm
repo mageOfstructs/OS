@@ -57,3 +57,11 @@ global isr_test
 isr_test:
     mov byte [0xb8000], 'Q'
     iret
+
+global isr_keyboard
+extern keyboard_test
+isr_keyboard:
+  pushad
+  call keyboard_test
+  popad
+  iret

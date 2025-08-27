@@ -40,6 +40,7 @@ static bool vectors[IDT_MAX_DESCRIPTORS];
 extern uint32_t isr_stub_table[];
 
 extern uint32_t isr_test;
+extern uint32_t isr_keyboard;
 
 void idt_init() {
   idtr.base = (uintptr_t)&idt[0];
@@ -58,6 +59,8 @@ void idt_init() {
   // &-operator to refer to the label's *address*
   idt_set_descriptor(0x80, (uint32_t)&isr_test,
                      0x8E); // one of the most fundamental misunderstandings
+  idt_set_descriptor(0x21, (uint32_t)&isr_keyboard,
+                     0x8E);
 
   __asm__ volatile("lidt %0" : : "m"(idtr)); // load the new IDT
   __asm__ volatile("sti");                   // set the interrupt flag
