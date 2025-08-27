@@ -28,6 +28,9 @@ void exception_handler_errcode(uint8_t inum, uint32_t errcode, int_frame_t f) {
 }
 
 void keyboard_test() {
-  printf("a\n");
+  char key = get_key_pressed();
+  if (key) {
+    printf("%c", key);
+  }
   PIC_sendEOI(1);
 }
