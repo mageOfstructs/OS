@@ -53,6 +53,17 @@ isr_stub_table:
 %assign i i+1 
 %endrep
 
+@macro isr 1
+global isr_%1
+extern int_%1
+isr_%1:
+pushad
+cld
+call int_%1
+popad
+iret
+@endmacro
+
 global isr_test
 isr_test:
     mov byte [0xb8000], 'Q'
@@ -65,3 +76,5 @@ isr_keyboard:
   call keyboard_test
   popad
   iret
+
+isr timer

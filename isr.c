@@ -31,3 +31,7 @@ void keyboard_test() {
   printf("a\n");
   PIC_sendEOI(1);
 }
+
+void int_timer() {
+  printf("b\n");
+}

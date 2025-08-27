@@ -43,6 +43,7 @@ extern uint32_t isr_stub_table[];
 
 extern uint32_t isr_test;
 extern uint32_t isr_keyboard;
+extern uint32_t isr_timer;
 
 void idt_init() {
   idtr.base = (uintptr_t)&idt[0];
@@ -62,6 +63,8 @@ void idt_init() {
   idt_set_descriptor(0x80, (uint32_t)&isr_test,
                      INT_TYPE_R0); // one of the most fundamental misunderstandings
   idt_set_descriptor(0x21, (uint32_t)&isr_keyboard,
+                     INT_TYPE_R0);
+  idt_set_descriptor(0x20, (uint32_t)&isr_timer,
                      INT_TYPE_R0);
 
   __asm__ volatile("lidt %0" : : "m"(idtr)); // load the new IDT
