@@ -1,5 +1,6 @@
 %macro isr_err_stub 1
 isr_stub_%+%1:
+    push byte %1
     call exception_handler_errcode
     iret 
 %endmacro
