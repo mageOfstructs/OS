@@ -1,9 +1,12 @@
 #include "idt.h"
 #include "printf.h"
 #include <stdint.h>
+#include "pic.h"
 
 int main() {
   idt_init();
+  PIC_remap(0x20, 0x28);
+
   // enable_cursor(0, 15);
   // *((int *)0xb8000) = 0x07690748;
   char *test = "Test";
