@@ -36,5 +36,6 @@ void keyboard_test(void) {
 }
 
 void timer(void) {
-  printf("t");
+  // printf("t");
+  PIC_sendEOI(0);
 }
