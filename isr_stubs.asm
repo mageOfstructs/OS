@@ -59,10 +59,10 @@ isr_test:
     mov byte [0xb8000], 'Q'
     iret
 
-global isr_keyboard
-extern keyboard_test
-isr_keyboard:
+global isr_timer
+extern timer
+isr_timer:
   pushad
-  call keyboard_test
+  call timer
   popad
   iret
