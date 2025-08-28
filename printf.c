@@ -122,7 +122,7 @@ int printf(const char *format, ...) {
       cursor += VGA_WIDTH - (cursor - VMEM_START) % VGA_WIDTH;
       break;
     case '\r':
-      cursor = VMEM_START;
+      cursor = (cursor - VMEM_START) / VGA_WIDTH;
       break;
     default:
       put_char(format[i], cursor);
@@ -133,5 +133,8 @@ int printf(const char *format, ...) {
   }
   va_end(args);
   last_cursor_pos = cursor;
+  if (cursor > LAST_CHAR_ON_SCREEN) {
+    asm("rep ")
+  }
   return 0;
 }
