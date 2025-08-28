@@ -80,6 +80,7 @@ void PIC_sendEOI(uint8_t irq) {
 
 static bool shift_pressed = false;
 #define ESC 0x0e
+#define ENTER 0x0d
 // BUG: if both shift keys are pressed the character is lowercase
 char conv_scancode(unsigned char sc) {
   char ret = 0;
@@ -140,7 +141,7 @@ char conv_scancode(unsigned char sc) {
       ret = ']';
       break;
     case 0x1c:
-      return 0; // TODO: Enter
+      return ENTER;
     case 0x1d:
       return 0; // TODO: CTRL
     case 0x1e:
