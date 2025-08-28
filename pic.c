@@ -67,7 +67,7 @@ void PIC_remap(int offset1, int offset2) // call it with 0x20 and 0x28
   printf("Current scanset: %d\n", inb(KEYBOARD_COM));
 
   // Unmask both PICs.
-  outb(PIC1_DATA, 1); // we haven't programmed the PIT yet, so we skip it
+  outb(PIC1_DATA, 0);
   outb(PIC2_DATA, 0);
 }
 
