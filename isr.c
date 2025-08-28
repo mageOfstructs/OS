@@ -27,10 +27,15 @@ void exception_handler_errcode(uint8_t inum, uint32_t errcode, int_frame_t f) {
   __asm__ volatile("cli; hlt; jmp $"); // Completely hangs the computer
 }
 
-void keyboard_test() {
+void keyboard_test(void) {
   char key = get_key_pressed();
   if (key) {
     printf("%c", key);
   }
   PIC_sendEOI(1);
+}
+
+void timer(void) {
+  // printf("t");
+  PIC_sendEOI(0);
 }

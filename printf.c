@@ -122,7 +122,7 @@ int printf(const char *format, ...) {
       cursor += VGA_WIDTH - (cursor - VMEM_START) % VGA_WIDTH;
       break;
     case '\r':
-      cursor = VMEM_START;
+      cursor -= (cursor - VMEM_START) % VGA_WIDTH;
       break;
     default:
       put_char(format[i], cursor);
@@ -133,5 +133,22 @@ int printf(const char *format, ...) {
   }
   va_end(args);
   last_cursor_pos = cursor;
+  if (cursor > LAST_CHAR_ON_SCREEN) { // scroll one line up if we hit the bottom
+    unsigned int last_dst = VMEM_START_CONST;
+    for (unsigned int dst = 0xB80a0; dst < LAST_CHAR_ON_SCREEN;
+         dst += VGA_WIDTH_BYTES) {
+      asm("mov ecx, " CONST_TOSTR(VGA_WIDTH_BYTES) "\n\t"
+                                                   "mov esi, %0\n\t"
+                                                   "mov edi, %1\n\t"
+                                                   "rep; movsb" ::"g"(dst),
+          "g"(last_dst));
+      last_dst = dst;
+    }
+    for (unsigned int i = 0; i < VGA_WIDTH_BYTES; i++) {
+      *(char *)(last_dst + i) =
+          0; // Screw you clangd, this works perfectly!1!11!11
+    }
+    last_cursor_pos = VMEM_START + (VGA_LINES - 1) * VGA_WIDTH;
+  }
   return 0;
 }

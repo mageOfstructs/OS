@@ -1,4 +1,5 @@
 #include "idt.h"
+#include "vm.h"
 #include "pic.h"
 #include "printf.h"
 #include <stdint.h>
@@ -6,13 +7,12 @@
 int main() {
   idt_init();
   PIC_remap(0x20, 0x28);
+  setup_vm();
 
   // enable_cursor(0, 15);
   // *((int *)0xb8000) = 0x07690748;
   char *test = "Test";
   uint32_t eip;
-  // for (;;)
-  //   ;
   asm("mov %0, $" : "=r"(eip));
   printf("cur eip: %p\n", eip);
   int asdf = 43;

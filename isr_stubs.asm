@@ -66,3 +66,11 @@ isr_keyboard:
   call keyboard_test
   popad
   iret
+
+global isr_timer
+extern timer
+isr_timer:
+  pushad
+  call timer
+  popad
+  iret
