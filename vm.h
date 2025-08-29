@@ -1,5 +1,11 @@
+#ifndef VM_H
+
+#define VM_H
+
 #include <stdint.h>
 #include <stdbool.h>
+
+#define NULL 0
 
 void setup_vm(void);
 
@@ -16,12 +22,12 @@ void setup_vm(void);
 */
 typedef struct pde {
   uint8_t flags;
-  uint8_t avl: 4;
-  uint16_t laddr; // bits 12-27 of addr
-  uint8_t haddr : 4; // bits 28-31 of addr
+  uint8_t avladdr; // lower 4 bits are avl, higher ones are bits 12-15 of addr
+  uint16_t haddr; // bits 16-31 of addr
 } __attribute__((packed)) pde_t;
 
 #define BLANK_PDE 0x00000002
+#define BLANK_PTE BLANK_PDE
 
 /*
  * flags:
@@ -38,6 +44,8 @@ typedef struct pte {
   uint8_t flags;
   uint8_t g : 1;
   uint8_t avl: 3;
-  uint16_t laddr; // bits 12-27 of addr
-  uint8_t haddr : 4; // bits 28-31 of addr
+  uint8_t laddr : 4; // bits 12-15 of addr
+  uint16_t haddr; // bits 16-31 of addr
 } __attribute__((packed)) pte_t;
+
+#endif // !VM_H
