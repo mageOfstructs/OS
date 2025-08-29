@@ -73,22 +73,33 @@ uint32_t *alloc_pt() {
 
 /**
  * helper method for vm mapping
+ * maps n pages, starting from vaddr_start to a continuous block starting at paddr_start
+ * As addresses must be aligned to 4K, the lower 12 bits of vaddr_start are ignored
  * will fail if address is already mapped, therefore it doesn't do a TLB flush
 **/
 int vm_map(uint32_t vaddr_start, uint32_t paddr_start, uint32_t len) {
   uint32_t pd_i = vaddr_start >> 22;
   uint32_t pt_i = vaddr_start >> 12 & 0x03FF;
-  if (is_pde_present(pd_i)) {
-    uint32_t *pt = (uint32_t*) page_dir[pd_i];
-    if (is_pte_present(pt, pt_i)) // address is already mapped
-      return 1;
-    fill_pte((pte_t*)&pt[pt_i], paddr_start, true, false, false);
-  } else {
-    uint32_t *pt = alloc_pt();
-    if (!pt) return 2; // ran out of pt_space
-    fill_pde((pde_t*)&page_dir[pd_i], (uint32_t)pt, true, false);
-    printf("vm_map: %p == %p? \n", (uint32_t)pt, page_dir[pd_i]);
-    fill_pte((pte_t*)&pt[pt_i], paddr_start, true, false, false);
+
+  uint32_t *pt;
+  while (len > 0) { // TODO: condition
+    if (is_pde_present(pd_i)) {
+      pt = (uint32_t*) page_dir[pd_i];
+    } else {
+      pt = alloc_pt();
+      if (!pt) return 2; // ran out of pt_space
+      fill_pde((pde_t*)&page_dir[pd_i], (uint32_t)pt, true, false);
+      printf("vm_map: %p == %p? \n", (uint32_t)pt, page_dir[pd_i]);
+    }
+    while (len > 0 && pt_i < 1024) {
+      if (is_pte_present(pt, pt_i)) // address is already mapped
+        return 1;
+      fill_pte((pte_t*)&pt[pt_i++], paddr_start, true, false, false);
+      paddr_start += 4096;
+      len--;
+    }
+    pd_i++;
+    pt_i = 0;
   }
   return 0; // success
 } 
@@ -102,10 +113,11 @@ void enable_paging(void) {
   printf("physaddr of 0x1410 is: %p\n", get_physaddr((void *)0x1410));
 
   printf("physaddr of 0x400000 is: %p\n", get_physaddr((void *)0x400000));
-  int map_status = vm_map(0x12345678, 0x00800000, 1);
+  int map_status = vm_map(0x12345678, 0x00800000, 2);
   printf("vm_map status: %d\n", map_status);
   printf("physaddr of 0x12345678 is: %p\n", get_physaddr((void *)0x12345678));
-  // for (;;) asm("cli; hlt");
+  printf("physaddr of 0x12346678 is: %p\n", get_physaddr((void *)0x12346678));
+
   asm volatile("mov eax, %0\n\t"
                "mov cr3, eax\n\t"
                "mov eax, cr0\n\t"
@@ -113,6 +125,8 @@ void enable_paging(void) {
                "mov cr0, eax\n\t" ::"g"(
                    page_dir)); // okay so I have no idea what/why just happened
                                // but I added the g here and now it works?????
+  // printf("%c", *((char*)0x12345678));
+  // printf("%c", *((char*)0x12346678));
 }
 
 void setup_vm(void) {
