@@ -1,3 +1,4 @@
+; [bits 32]
 %macro isr_err_stub 1
 isr_stub_%+%1:
     push byte %1
@@ -7,6 +8,7 @@ isr_stub_%+%1:
 
 %macro isr_no_err_stub 1
 isr_stub_%+%1:
+    push byte %1
     call exception_handler
     iret
 %endmacro

@@ -12,10 +12,8 @@ int main() {
   // enable_cursor(0, 15);
   // *((int *)0xb8000) = 0x07690748;
   char *test = "Test";
-  uint32_t eip;
-  asm("mov %0, $" : "=r"(eip));
-  printf("cur eip: %p\n", eip);
   int asdf = 43;
+  // printf("%c", *((char *)0x99999999));
   // printf("%s %s %s", test, "asdf", "fdas");
   printf("test\n");
   printf("test2\n");
