@@ -58,6 +58,10 @@ static inline bool is_pte_present(uint32_t *pt, uint32_t i) {
   return pt[i] & 1;
 }
 
+static inline uint32_t get_page_addr(pte_t *pte) {
+  return ((uint32_t)pte->laddr << 12) | ((uint32_t)pte->haddr << 16);
+}
+
 uint32_t *alloc_pt() {
   for (int i = 0; i < 1024; i++) {
     if ((free_pts_bitmap[i / 8] >> (i % 8)) & 1) {
@@ -82,7 +86,7 @@ int vm_map(uint32_t vaddr_start, uint32_t paddr_start, uint32_t len) {
   uint32_t pt_i = vaddr_start >> 12 & 0x03FF;
 
   uint32_t *pt;
-  while (len > 0) { // TODO: condition
+  while (len > 0) {
     if (is_pde_present(pd_i)) {
       pt = (uint32_t*) page_dir[pd_i];
     } else {
@@ -104,6 +108,35 @@ int vm_map(uint32_t vaddr_start, uint32_t paddr_start, uint32_t len) {
   return 0; // success
 } 
 
+static inline void __native_flush_tlb_single(unsigned long addr) {
+   asm volatile("invlpg [%0]" ::"r" (addr) : "memory");
+}
+
+int vm_unmap(uint32_t vaddr_start, uint32_t len) {
+  uint32_t pd_i = vaddr_start >> 22;
+  uint32_t pt_i = vaddr_start >> 12 & 0x03FF;
+  uint32_t *pt;
+  int ret = 0;
+
+  while (len > 0) {
+    if (!is_pde_present(pd_i)) return 1; // encountered non-present pde
+    pt = (uint32_t*) page_dir[pd_i];
+    while (len > 0 && pt_i < 1024) {
+      if (!is_pte_present(pt, pt_i)) {
+        printf("ERR: %p is not present!", pt[pt_i]);
+        return 2; // encountered non-present pte
+      }
+      printf("vm_unmap: Unmapping page %p\n", get_page_addr((pte_t*)&pt[pt_i]));
+      __native_flush_tlb_single(get_page_addr((pte_t*)&pt[pt_i]));
+      pt[pt_i--] = BLANK_PTE;
+      len--;
+    }
+    pd_i++;
+    pt_i = 0;
+  }
+  return 0;
+}
+
 void enable_paging(void) {
   printf("page_dir addr is %p\n", page_dir);
   printf("physaddr of 0x1000 is: %p\n", get_physaddr((void *)0x1000));
@@ -112,12 +145,6 @@ void enable_paging(void) {
   printf("physaddr of 0x4800 is: %p\n", get_physaddr((void *)0x4800));
   printf("physaddr of 0x1410 is: %p\n", get_physaddr((void *)0x1410));
 
-  printf("physaddr of 0x400000 is: %p\n", get_physaddr((void *)0x400000));
-  int map_status = vm_map(0x12345678, 0x00800000, 2);
-  printf("vm_map status: %d\n", map_status);
-  printf("physaddr of 0x12345678 is: %p\n", get_physaddr((void *)0x12345678));
-  printf("physaddr of 0x12346678 is: %p\n", get_physaddr((void *)0x12346678));
-
   asm volatile("mov eax, %0\n\t"
                "mov cr3, eax\n\t"
                "mov eax, cr0\n\t"
@@ -125,8 +152,17 @@ void enable_paging(void) {
                "mov cr0, eax\n\t" ::"g"(
                    page_dir)); // okay so I have no idea what/why just happened
                                // but I added the g here and now it works?????
-  // printf("%c", *((char*)0x12345678));
-  // printf("%c", *((char*)0x12346678));
+  printf("physaddr of 0x400000 is: %p\n", get_physaddr((void *)0x400000));
+  int map_status = vm_map(0x12345678, 0x00800000, 2);
+  printf("vm_map status: %d\n", map_status);
+  printf("physaddr of 0x12345678 is: %p\n", get_physaddr((void *)0x12345678));
+  printf("physaddr of 0x12346678 is: %p\n", get_physaddr((void *)0x12346678));
+
+  printf("%c", *((char*)0x12345678));
+  printf("%c", *((char*)0x12346678));
+
+  printf("\n%d\n", vm_unmap(0x12345678, 2));
+  printf("%c", *((char*)0x12345678));
 }
 
 void setup_vm(void) {
