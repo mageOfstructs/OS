@@ -198,7 +198,7 @@ void enable_paging(void) {
   printf("physaddr of 0x12347678 is: %p\n", get_physaddr((void *)0x12347678));
 
   vm_unmap(0x12347678, 1);
-  printf("%c", *((char *)0x12347678));
+  // printf("%c", *((char *)0x12347678));
   // printf("%c", *((char *)0x12346678));
   //
   // printf("\n%d\n", vm_unmap(0x12345678, 2));
