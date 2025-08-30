@@ -1,5 +1,7 @@
 #include "vm.h"
+#include "phys_alloc.h"
 #include "printf.h"
+#include "utils.h"
 #include <stdint.h>
 
 static uint32_t page_dir[1024] __attribute__((aligned(4096)));
@@ -9,8 +11,11 @@ static uint32_t kernel_pt[1024] __attribute__((aligned(4096)));
 static uint32_t *pt_space_pt = (uint32_t *)(0x0);
 static uint32_t *pt_space =
     (uint32_t *)(0x400000); // note: need to increase it by 1024 to access the
-                            // next table
-static uint8_t free_pts_bitmap[128] = {255};
+void *freelist_buf = (void *)(0x400000 + 126 * 1024 * 4); // wrong calc
+// next table
+static uint8_t free_pts_bitmap[128] = {
+    255, [127] = 0b00111111}; // we already have two page tables, so there's no
+                              // need for allocating that space again here
 
 void fill_pde(pde_t *p, uint32_t addr, bool write_allowed,
               bool available_to_userspace) {
@@ -32,9 +37,9 @@ void fill_pte(pte_t *p, uint32_t addr, bool write_allowed,
     p->flags |= 4;
   p->g = global & 1; // make sure we don't overflow the bit field
   p->avl = 0;
+  printf("fill_pte physaddr: %p %p;", p, addr);
   p->laddr = (uint8_t)(addr >> 12) & 0x0F;
   p->haddr = (uint16_t)(addr >> 16);
-  // printf("PTE size: %d\n", sizeof(pte_t));
 }
 
 void *get_physaddr(void *virtualaddr) {
@@ -42,13 +47,11 @@ void *get_physaddr(void *virtualaddr) {
   unsigned long ptindex = (unsigned long)virtualaddr >> 12 & 0x03FF;
 
   unsigned long *pd = page_dir;
-  // Here you need to check whether the PD entry is present.
 
   unsigned long *pt = (uint32_t *)(pd[pdindex] & ~0xFFF);
-  printf("PT: %p ", pt);
-  // Here you need to check whether the PT entry is present.
+  printf("pd_i: %d, pt_i: %d PT: %p ", pdindex, ptindex, pt);
 
-  printf("PTE: %p ", (pt[ptindex]));
+  printf("PTE: %p %p", &(pt[ptindex]), (pt[ptindex]));
   printf("Page: %p\n", (pt[ptindex] & ~0xFFF));
 
   return (void *)((pt[ptindex] & ~0xFFF) +
@@ -75,22 +78,32 @@ uint32_t *alloc_pt() {
   }
   return NULL;
 }
+int free_pt(uint32_t *pt) {
+  if (pt < pt_space || pt >= (pt_space + 1024 * 1024))
+    return -1; // out of bounds
+  uint32_t i = (uint32_t)(pt - pt_space) / 1024;
+  if (free_pts_bitmap[i / 8] >> i % 8) { // did we allocate a page table there?
+    free_pts_bitmap[i / 8] &= ~(1 << (i % 8));
+    return 0; // success
+  } else
+    return -2; // trying to free a deallocated page
+}
 
 /**
  * helper method for vm mapping
- * maps n pages, starting from vaddr_start to a continuous block starting at
- *paddr_start As addresses must be aligned to 4K, the lower 12 bits of
- *vaddr_start are ignored will fail if address is already mapped, therefore it
- *doesn't do a TLB flush
+ * maps n pages, starting from vaddr_start
+ * As addresses must be aligned to 4K,
+ *the lower 12 bits of vaddr_start are ignored will fail if address is already
+ *mapped, therefore it doesn't do a TLB flush
  **/
-int vm_map(uint32_t vaddr_start, uint32_t paddr_start, uint32_t len) {
+int vm_map(uint32_t vaddr_start, uint32_t len) {
   uint32_t pd_i = vaddr_start >> 22;
   uint32_t pt_i = vaddr_start >> 12 & 0x03FF;
 
   uint32_t *pt;
   while (len > 0) {
     if (is_pde_present(pd_i)) {
-      pt = (uint32_t *)page_dir[pd_i];
+      pt = (uint32_t *)(page_dir[pd_i] & ~0xFFF);
     } else {
       pt = alloc_pt();
       if (!pt)
@@ -101,8 +114,13 @@ int vm_map(uint32_t vaddr_start, uint32_t paddr_start, uint32_t len) {
     while (len > 0 && pt_i < 1024) {
       if (is_pte_present(pt, pt_i)) // address is already mapped
         return 1;
-      fill_pte((pte_t *)&pt[pt_i++], paddr_start, true, false, false);
-      paddr_start += 4096;
+
+      uint32_t paddr = (uint32_t)phys_alloc(1);
+      KASSERT(paddr);
+      printf("pt: %p\n", pt);
+      fill_pte((pte_t *)&pt[pt_i++], paddr, true, false, false);
+      printf(" pd_i: %d, pt_i: %d, Pte: %p", pd_i, pt_i - 1,
+             ((uint32_t *)page_dir[pd_i])[pt_i - 1]);
       len--;
     }
     pd_i++;
@@ -138,6 +156,7 @@ int vm_unmap(uint32_t vaddr_start, uint32_t len) {
       }
       // printf("vm_unmap: Unmapping page %p\n", get_addr(pt[pt_i]));
       // __native_flush_tlb_single(get_addr(pt[pt_i]));
+      phys_dealloc((void *)(pt[pt_i] & ~0xFFF));
       printf("vm_unmap: Unmapping page %p\n", vaddr_start);
       __native_flush_tlb_single(vaddr_start);
       vaddr_start += 4096;
@@ -152,11 +171,11 @@ int vm_unmap(uint32_t vaddr_start, uint32_t len) {
 
 void enable_paging(void) {
   printf("page_dir addr is %p\n", page_dir);
-  printf("physaddr of 0x1000 is: %p\n", get_physaddr((void *)0x1000));
-  printf("physaddr of 0x100f is: %p\n", get_physaddr((void *)0x100F));
-  printf("physaddr of 0x4000 is: %p\n", get_physaddr((void *)0x4000));
-  printf("physaddr of 0x4800 is: %p\n", get_physaddr((void *)0x4800));
-  printf("physaddr of 0x1410 is: %p\n", get_physaddr((void *)0x1410));
+  // printf("physaddr of 0x1000 is: %p\n", get_physaddr((void *)0x1000));
+  // printf("physaddr of 0x100f is: %p\n", get_physaddr((void *)0x100F));
+  // printf("physaddr of 0x4000 is: %p\n", get_physaddr((void *)0x4000));
+  // printf("physaddr of 0x4800 is: %p\n", get_physaddr((void *)0x4800));
+  // printf("physaddr of 0x1410 is: %p\n", get_physaddr((void *)0x1410));
 
   asm volatile("mov eax, %0\n\t"
                "mov cr3, eax\n\t"
@@ -165,17 +184,25 @@ void enable_paging(void) {
                "mov cr0, eax\n\t" ::"g"(
                    page_dir)); // okay so I have no idea what/why just happened
                                // but I added the g here and now it works?????
-  printf("physaddr of 0x400000 is: %p\n", get_physaddr((void *)0x400000));
-  int map_status = vm_map(0x12345678, 0x00800000, 2);
+  // printf("physaddr of 0x400000 is: %p\n", get_physaddr((void *)0x400000));
+
+  vm_map(0x12345678, 1);
+  vm_map(0x12347678, 1);
+  vm_unmap(0x12345678, 1);
+  int map_status = vm_map(0x12345678, 2);
   printf("vm_map status: %d\n", map_status);
   printf("physaddr of 0x12345678 is: %p\n", get_physaddr((void *)0x12345678));
+  printf(" done %p %p\n", &(((uint32_t *)page_dir[72])[837]),
+         ((uint32_t *)page_dir[72])[837]);
   printf("physaddr of 0x12346678 is: %p\n", get_physaddr((void *)0x12346678));
+  printf("physaddr of 0x12347678 is: %p\n", get_physaddr((void *)0x12347678));
 
-  printf("%c", *((char *)0x12345678));
-  printf("%c", *((char *)0x12346678));
-
-  printf("\n%d\n", vm_unmap(0x12345678, 2));
-  printf("%c", *((char *)0x12345678));
+  vm_unmap(0x12347678, 1);
+  printf("%c", *((char *)0x12347678));
+  // printf("%c", *((char *)0x12346678));
+  //
+  // printf("\n%d\n", vm_unmap(0x12345678, 2));
+  // printf("%c", *((char *)0x12346678));
 }
 
 void setup_vm(void) {
@@ -201,5 +228,6 @@ void setup_vm(void) {
   fill_pde((pde_t *)page_dir, (unsigned long)kernel_pt, true, false);
   fill_pde((pde_t *)(&page_dir[1]), (unsigned long)pt_space_pt, true, false);
 
+  init_physalloc(0x00800000, 0x00801000);
   enable_paging();
 }
