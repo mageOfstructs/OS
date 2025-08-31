@@ -196,8 +196,11 @@ void enable_paging(void) {
          ((uint32_t *)page_dir[72])[837]);
   printf("physaddr of 0x12346678 is: %p\n", get_physaddr((void *)0x12346678));
   printf("physaddr of 0x12347678 is: %p\n", get_physaddr((void *)0x12347678));
+  dbg_llist();
 
   vm_unmap(0x12347678, 1);
+  vm_unmap(0x12345678, 2);
+  dbg_llist();
   // printf("%c", *((char *)0x12347678));
   // printf("%c", *((char *)0x12346678));
   //

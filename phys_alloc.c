@@ -16,8 +16,8 @@ static void *alloc_node() { return alloc_ctx(&alloc, sizeof(llist_node_fb)); }
 void dbg_llist() {
   int i = 0;
   llist_node_fb *cur = freelist_buf->head;
-  while (cur && i < 3) {
-    printf("%d ", cur->val.sz);
+  while (cur && i < 20) {
+    printf("[%p %d] ", cur->val.start, cur->val.sz);
     cur = cur->next;
     i++;
   }
@@ -44,16 +44,36 @@ void init_physalloc(uint32_t heap_start, uint32_t heap_end) {
   printf("init_physalloc: range %p-%p\n", heap_start, heap_end);
 }
 
-// TODO: have some logic that combines different free_blocks if they're adjacent
+void llist_fb_sorted_insert(llist_node_fb *n);
+
+int combine_fbs(llist_node_fb *cur, llist_node_fb *n) {
+  if (cur->val.start == n->val.start - cur->val.sz * 4096) {
+    cur->val.sz += n->val.sz;
+    llist_node_fb_remove(freelist_buf, cur);
+    llist_fb_sorted_insert(cur);
+    return 1;
+  } else if (cur->val.start == n->val.start + n->val.sz * 4096) {
+    cur->val.start = (void *)((uint32_t)n->val.start & ~0xFFF);
+    cur->val.sz += n->val.sz;
+    llist_node_fb_remove(freelist_buf, cur);
+    llist_fb_sorted_insert(cur);
+    return 1;
+  }
+  return 0;
+}
+
 void llist_fb_sorted_insert(llist_node_fb *n) {
 
   if (!freelist_buf->head || (n->val.sz >= freelist_buf->head->val.sz)) {
-    printf("llist_fb_sorted_insert: %p %d >= %d\n", freelist_buf->head,
-           n->val.sz, freelist_buf->head->val.sz);
+    if (combine_fbs(freelist_buf->head, n))
+      return;
+
     llist_pushf_fb(freelist_buf, n);
     return;
   }
   if (!freelist_buf->tail || n->val.sz <= freelist_buf->tail->val.sz) {
+    if (combine_fbs(freelist_buf->tail, n))
+      return;
     llist_pushb_fb(freelist_buf, n);
     return;
   }
@@ -62,6 +82,9 @@ void llist_fb_sorted_insert(llist_node_fb *n) {
   if (n->val.sz <= MAX_SMALL_PG_ALLOC_SZ) {
     cur = &freelist_buf->tail;
     while (*cur && (*cur)->val.sz > n->val.sz) {
+      printf("%p %p\n", (*cur)->val.start, n->val.start);
+      if (combine_fbs(*cur, n))
+        return;
       cur = &(*cur)->prev;
     }
     n->next = (*cur)->next;
@@ -70,8 +93,10 @@ void llist_fb_sorted_insert(llist_node_fb *n) {
       (*cur)->next->prev = n;
     (*cur)->next = n;
   } else {
-    llist_node_fb **cur = &freelist_buf->head;
+    cur = &freelist_buf->head;
     while (*cur && (*cur)->val.sz < n->val.sz) {
+      if (combine_fbs(*cur, n))
+        return;
       cur = &(*cur)->next;
     }
     n->prev = (*cur)->prev;
@@ -136,16 +161,16 @@ void phys_dealloc(void *allocation) {
   printf("Creating new free block at %p with %d pages\n", start, size);
   free_block_t new_free = {.start = start, .sz = size};
   llist_node_fb new_free_n = NODE_INIT(new_free);
-  llist_node_fb *new_free_nspace = alloc_node(); // FIXME: uhhh tis broken
+  llist_node_fb *new_free_nspace = alloc_node();
   KASSERT(new_free_nspace);
-  if (freelist_buf->head)
-    printf("head before: %d\n", freelist_buf->head->val.sz);
-  else
-    printf("head before empty\n");
+  // if (freelist_buf->head)
+  //   printf("head before: %d\n", freelist_buf->head->val.sz);
+  // else
+  //   printf("head before empty\n");
   *new_free_nspace = new_free_n;
   llist_fb_sorted_insert(new_free_nspace);
-  if (freelist_buf->head)
-    printf("head: %d\n", freelist_buf->head->val.sz);
-  else
-    printf("head empty\n");
+  // if (freelist_buf->head)
+  //   printf("head: %d\n", freelist_buf->head->val.sz);
+  // else
+  //   printf("head empty\n");
 }

@@ -18,5 +18,6 @@ typedef struct free_block {
 void *phys_alloc(uint16_t n);
 void phys_dealloc(void *allocation);
 void init_physalloc(uint32_t heap_start, uint32_t heap_end);
+void dbg_llist();
 
 #endif /* ifndef PHYS_ALLOC_H */
