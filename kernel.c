@@ -1,3 +1,4 @@
+#include "ata.h"
 #include "idt.h"
 #include "pic.h"
 #include "printf.h"
@@ -26,9 +27,19 @@ int main() {
       "rep; movsb\n\t"
       "lgdt %2" ::"g"(GDT),
       "g"(GDTR), "m"(GDTR));
-  idt_init();
   PIC_remap(0x20, 0x28);
+  idt_init();
   setup_vm();
+
+  uint8_t buf[256];
+  // int ret = identify(buf);
+  int ret = 1;
+  printf("identify: %d", ret);
+  if (ret == IDENTIFY_ATA) {
+    for (int i = 0; i < 256; i++) {
+      printf("%p", buf[i]);
+    }
+  }
 
   // enable_cursor(0, 15);
   // *((int *)0xb8000) = 0x07690748;
@@ -36,7 +47,7 @@ int main() {
   int asdf = 43;
   // printf("%c", *((char *)0x99999999));
   // printf("%s %s %s", test, "asdf", "fdas");
-  // printf("test\n");
+  printf("test\n");
   // printf("test2\n");
   // int tmp = 1 / 0;
   // printf("test3\n");
