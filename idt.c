@@ -47,6 +47,9 @@ extern uint32_t isr_timer;
 
 void idt_init() {
   idtr.base = (uintptr_t)&idt[0];
+  printf("IDTR: %p\n", &idtr);
+  printf("IDTR Base: %p\n", idtr.base);
+  printf("ISR 0: %p\n", isr_stub_table[0]);
   idtr.limit = (uint16_t)sizeof(idt_entry_t) * IDT_MAX_DESCRIPTORS - 1;
 
   for (uint8_t vector = 0; vector < 32; vector++) {
