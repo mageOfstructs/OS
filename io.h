@@ -2,5 +2,5 @@
 #include <stdint.h>
 
 void outb(uint16_t dev, char val);
-char inb(uint16_t dev);
+uint8_t inb(uint16_t dev);
 void io_wait(void);

@@ -4,7 +4,7 @@ inline void outb(uint16_t dev, char val) {
   asm volatile("out dx, al" : : [dev] "d"(dev), [val] "a"(val));
 }
 
-inline char inb(uint16_t dev) {
+inline uint8_t inb(uint16_t dev) {
   char ret;
   asm volatile("mov dx, %[dev]\n\t"
                "in %0, dx\n\t"
