@@ -11,7 +11,7 @@ int is_fs_not_ok(superblock_t *sp) {
   return 0;
 }
 
-uint32_t get_blocks_per_bg(superblock_t *sp) {
+uint32_t get_number_of_bgs(superblock_t *sp) {
   uint32_t ret = ceild(sp->total_blocks, sp->blocks_per_bg);
   KASSERT(ret == ceild(sp->total_inodes, sp->inodes_per_bg));
   return ret;
@@ -19,6 +19,10 @@ uint32_t get_blocks_per_bg(superblock_t *sp) {
 
 uint32_t get_block_size(superblock_t *sp) {
   return 1024 << sp->log2_bs;
+}
+
+uint32_t block_to_phys_addr(superblock_t *sp, uint32_t block_addr) {
+  return block_addr * get_block_size(sp);
 }
 
 uint16_t sp_buf[1024];
@@ -37,5 +41,13 @@ void init_fs() {
   printf("Number of bytes per block: %d\n", get_block_size(sp));
   printf("Number of inodes: %d\n", sp->total_inodes);
   printf("Superblock lives at block: %d\n", sp->superblock_block_num);
-  printf("Number of block groups: %d\n", get_blocks_per_bg(sp));
+  printf("Number of block groups: %d\n", get_number_of_bgs(sp));
+  printf("Version: %d.%d\n", sp->major_version, sp->min_version);
+
+  uint32_t bgdt_size = sizeof(bg_desc_t)*get_number_of_bgs(sp);
+  bg_desc_t *bgdt = kalloc(bgdt_size);
+  KASSERT(bgdt);
+  read(true, 2048, bgdt_size, bgdt);
+  printf("%d free inodes in block group 0\n", bgdt[0].unallocated_inodes_in_group);
+  printf("%d directories in block group 0\n", bgdt[0].dirs_in_group);
 }

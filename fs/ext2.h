@@ -6,6 +6,7 @@
 #include "../printf.h"
 #include "../math.h"
 #include "../utils.h"
+#include "../malloc.h"
 #include <stdbool.h>
 
 #define EXT2_SIG 0xef53
@@ -47,6 +48,30 @@ typedef struct bg_desc {
   uint16_t dirs_in_group;
   uint16_t unused;
   uint32_t unused2[3];
+} bg_desc_t;
+
+typedef struct inode {
+  uint16_t typeperm;
+  uint16_t uid;
+  uint32_t lsize;
+  uint32_t last_access; // UNIX Timestamp
+  uint32_t creation; // UNIX Timestamp
+  uint32_t last_modification; // UNIX Timestamp
+  uint32_t deletion_time; // UNIX Timestamp
+  uint16_t gui;
+  uint16_t hardlnk_cnt; // hardlinks to this inode
+  uint32_t sec_cnt; // sectors used by this inode
+  uint32_t flags;
+  uint32_t os_specific;
+  uint32_t dptrs[12];
+  uint32_t singly_iptr;
+  uint32_t doubly_iptr;
+  uint32_t triply_iptr;
+  uint32_t gen_num;
+  uint32_t acl; // only avl if version >= 1
+  uint32_t hsize; // only avl if version >= 1
+  uint32_t frag_ba;
+  uint32_t os_specific2[3];
 };
 
 #endif // !EXT2_H
