@@ -2,6 +2,7 @@
 #include "phys_alloc.h"
 #include "printf.h"
 #include "utils.h"
+#include "malloc.h"
 #include <stdint.h>
 
 static uint32_t page_dir[1024] __attribute__((aligned(4096)));
@@ -237,7 +238,7 @@ void setup_vm(void) {
   enable_paging();
   
   KASSERT(vm_map(VM_HEAP_START, 1) == 0);
-  init_kalloc(VM_HEAP_START, 4096);
+  init_kalloc((char*)VM_HEAP_START, 4096);
   // Test code, yes this is a very good way to do testing
   // int *test = kalloc(4);
   // *test = 4;
