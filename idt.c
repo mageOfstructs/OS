@@ -42,8 +42,11 @@ static bool vectors[IDT_MAX_DESCRIPTORS];
 extern uint32_t isr_stub_table[];
 
 extern uint32_t isr_test;
+extern uint32_t isr_ata;
 extern uint32_t isr_keyboard;
 extern uint32_t isr_timer;
+extern uint32_t isr_ignore;
+extern uint32_t isr_pgf;
 
 void idt_init() {
   idtr.base = (uintptr_t)&idt[0];
@@ -57,6 +60,8 @@ void idt_init() {
     vectors[vector] = true;
   }
 
+  idt_set_descriptor(14, (uint32_t)&isr_pgf, INT_TYPE_R0);
+
   // We use an imported *label* (isr_test) here. A label in asm is a very
   // abstract concept, i.e. it doesn't leave any marks on the generated code by
   // itself. It can be thought of as a pointer dereference here, so when we say
@@ -68,6 +73,7 @@ void idt_init() {
       INT_TYPE_R0); // one of the most fundamental misunderstandings
   idt_set_descriptor(0x20, (uint32_t)&isr_timer, INT_TYPE_R0);
   idt_set_descriptor(0x21, (uint32_t)&isr_keyboard, INT_TYPE_R0);
+  idt_set_descriptor(0x2E, (uint32_t)&isr_ata, INT_TYPE_R0);
 
   __asm__ volatile("lidt %0" : : "m"(idtr)); // load the new IDT
   __asm__ volatile("sti");                   // set the interrupt flag

@@ -13,6 +13,16 @@ isr_stub_%+%1:
     iret
 %endmacro
 
+%macro isr_wrapper 1
+global isr_%+%1
+extern %1
+isr_%+%1:
+  pushad
+  call %1
+  popad
+  iret
+%endmacro
+
 extern exception_handler
 extern exception_handler_errcode
 isr_no_err_stub 0
@@ -56,6 +66,8 @@ isr_stub_table:
 %assign i i+1 
 %endrep
 
+isr_wrapper ata
+
 global isr_test
 isr_test:
     mov byte [0xb8000], 'Q'
@@ -75,4 +87,16 @@ isr_timer:
   pushad
   call timer
   popad
+  iret
+
+global isr_ignore
+isr_ignore:
+  iret
+
+global isr_pgf
+extern page_flt
+isr_pgf:
+  mov edx, cr2
+  push edx
+  call page_flt
   iret

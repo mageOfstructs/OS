@@ -1,5 +1,6 @@
 #include "pic.h"
 #include "printf.h"
+#include "ata.h"
 #include <stdint.h>
 
 typedef struct int_frame {
@@ -28,6 +29,13 @@ void exception_handler_errcode(uint8_t inum, uint32_t errcode, int_frame_t f) {
   __asm__ volatile("cli; hlt; jmp $"); // Completely hangs the computer
 }
 
+void page_flt(uint32_t vaddr, uint32_t errcode, int_frame_t f) {
+  printf("PAGE FAULT CAUSED BY %p\n", vaddr);
+  printf("EIP: %p; CS: %p; EFLAGS: %p\n", f.eip, f.cs, f.eflags);
+  printf("ERROR CODE: %p!\n", errcode);
+  __asm__ volatile("cli; hlt; jmp $"); // Completely hangs the computer
+}
+
 void keyboard_test(void) {
   char key = get_key_pressed();
   if (key) {
@@ -39,4 +47,9 @@ void keyboard_test(void) {
 void timer(void) {
   // printf("t");
   PIC_sendEOI(0);
+}
+
+void ata(void) {
+  printf("ATA IRQ\n");
+  PIC_sendEOI(14);
 }
