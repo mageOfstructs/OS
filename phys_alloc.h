@@ -12,12 +12,14 @@
  **/
 typedef struct free_block {
   void *start;
-  size_t sz;
+  uint32_t page_off;
+  uint64_t sz;
 } free_block_t;
 
 void *phys_alloc(uint16_t n);
 void phys_dealloc(void *allocation);
 void init_physalloc(uint32_t heap_start, uint32_t heap_end);
 void dbg_llist();
+void dbg_llist_rev();
 
 #endif /* ifndef PHYS_ALLOC_H */

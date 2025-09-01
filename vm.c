@@ -186,21 +186,22 @@ void enable_paging(void) {
                                // but I added the g here and now it works?????
   // printf("physaddr of 0x400000 is: %p\n", get_physaddr((void *)0x400000));
 
-  vm_map(0x12345678, 1);
-  vm_map(0x12347678, 1);
-  vm_unmap(0x12345678, 1);
-  int map_status = vm_map(0x12345678, 2);
-  printf("vm_map status: %d\n", map_status);
-  printf("physaddr of 0x12345678 is: %p\n", get_physaddr((void *)0x12345678));
-  printf(" done %p %p\n", &(((uint32_t *)page_dir[72])[837]),
-         ((uint32_t *)page_dir[72])[837]);
-  printf("physaddr of 0x12346678 is: %p\n", get_physaddr((void *)0x12346678));
-  printf("physaddr of 0x12347678 is: %p\n", get_physaddr((void *)0x12347678));
-  dbg_llist();
-
-  vm_unmap(0x12347678, 1);
-  vm_unmap(0x12345678, 2);
-  dbg_llist();
+  // Test code, I know, really good testing system in this kernel
+  // vm_map(0x12345678, 1);
+  // vm_map(0x12347678, 1);
+  // vm_unmap(0x12345678, 1);
+  // dbg_llist();
+  // dbg_llist_rev();
+  // int map_status = vm_map(0x12345678, 2);
+  // printf("vm_map status: %d\n", map_status);
+  // printf("physaddr of 0x12345678 is: %p\n", get_physaddr((void *)0x12345678));
+  // printf(" done %p %p\n", &(((uint32_t *)page_dir[72])[837]),
+  //        ((uint32_t *)page_dir[72])[837]);
+  // printf("physaddr of 0x12346678 is: %p\n", get_physaddr((void *)0x12346678));
+  // printf("physaddr of 0x12347678 is: %p\n", get_physaddr((void *)0x12347678));
+  //
+  // vm_unmap(0x12347678, 1);
+  // vm_unmap(0x12345678, 2);
   // printf("%c", *((char *)0x12347678));
   // printf("%c", *((char *)0x12346678));
   //
@@ -231,6 +232,18 @@ void setup_vm(void) {
   fill_pde((pde_t *)page_dir, (unsigned long)kernel_pt, true, false);
   fill_pde((pde_t *)(&page_dir[1]), (unsigned long)pt_space_pt, true, false);
 
-  init_physalloc(0x00800000, 0x00801000);
+  const uint32_t VM_HEAP_START = 0x00900000;
+  init_physalloc(0x00800000, VM_HEAP_START);
   enable_paging();
+  
+  KASSERT(vm_map(VM_HEAP_START, 1) == 0);
+  init_kalloc(VM_HEAP_START, 4096);
+  // Test code, yes this is a very good way to do testing
+  // int *test = kalloc(4);
+  // *test = 4;
+  // int *test2 = kalloc(4);
+  // *test2 = ~4;
+  // printf("%p != %p; %d != %d", test, test2, *test, *test2);
+  // kfree(test, 4);
+  // kfree(test2, 4);
 }
