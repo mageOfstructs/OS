@@ -3,6 +3,7 @@
 #include "pic.h"
 #include "printf.h"
 #include "vm.h"
+#include "fs/ext2.h"
 #include <stdint.h>
 
 static uint64_t GDT[3];
@@ -27,18 +28,20 @@ int main() {
       "rep; movsb\n\t"
       "lgdt %2" ::"g"(GDT),
       "g"(GDTR), "m"(GDTR));
+  // printf("GDTR size: %d", (GDTR[0] << 8) | GDTR[1]);
   PIC_remap(0x20, 0x28);
   idt_init();
   setup_vm();
 
-  uint8_t buf[256];
-  // int ret = identify(buf);
-  int ret = 1;
-  printf("identify: %d", ret);
+  uint16_t buf[256];
+  int ret = identify(buf);
+  // int ret = 1;
+  printf("identify: %d\n", ret);
   if (ret == IDENTIFY_ATA) {
-    for (int i = 0; i < 256; i++) {
-      printf("%p", buf[i]);
-    }
+    printf("Supports LBA48: %d\n", lba48_support(buf));
+    printf("Number of addressable LBA sectors: %p\n", get_lba_cnt(buf));
+    init_fs();
+    printf("Made it out alive!");
   }
 
   // enable_cursor(0, 15);
