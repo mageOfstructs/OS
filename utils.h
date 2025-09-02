@@ -5,7 +5,7 @@
 
 #define KASSERT(cond)                                                          \
   do {                                                                         \
-    if (!cond) {                                                               \
+    if (!(cond)) {                                                             \
       printf("ASSERTION FAILED!\n");                                           \
       printf("Location: %s at line %d\n", __FILE__, __LINE__);                 \
       printf("What went wrong: %s\n", #cond);                                  \
