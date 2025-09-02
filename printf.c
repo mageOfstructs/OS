@@ -1,21 +1,35 @@
 #include "printf.h"
 #include "cursor.h"
+#include "serial.h"
 #include <stdarg.h>
 
 // extern void prtint(u32 num, u32 base, u16 *off);
 
-void put_char(char c, volatile u16 *off) { *off = ((u16)c) | VMEM_COL_WHITE; }
+void put_char(char c, volatile u16 **cursor) { 
+  switch (c) {
+  case '\n':
+    *cursor += VGA_WIDTH - (*cursor - VMEM_START) % VGA_WIDTH;
+    break;
+  case '\r':
+    *cursor -= (*cursor - VMEM_START) % VGA_WIDTH;
+    break;
+  default:
+    **cursor = ((u16)c) | VMEM_COL_WHITE; 
+    (*cursor)++;
+  }
+  serial_putc(c); 
+}
 
-uint write_str(const char *str, volatile u16 *off) {
+uint write_str(const char *str, volatile u16 **off) {
   uint i = 0;
   while (str[i]) {
-    put_char(str[i], off + i);
+    put_char(str[i], off);
     i++;
   }
   return i;
 }
 
-uint write_int(long num, uint base, u16 *off) {
+uint write_int(long num, uint base, volatile u16 **off) {
   uint ret = 0;
   if (num < 0) {
     put_char('-', off);
@@ -38,65 +52,64 @@ uint write_int(long num, uint base, u16 *off) {
   } while (num > 0 &&
            buf_i < MAX_DIGITS); // handle the case where buf_i underflows
   if (buf_i < MAX_DIGITS)
-    ret += write_str(buf + buf_i + 1, off + ret);
+    ret += write_str(buf + buf_i + 1, off);
   else
-    ret += write_str("inf", off + ret);
+    ret += write_str("inf", off);
   return ret;
 }
 
-uint write_uint(long num, u32 base, u16 *off) {
+uint write_uint(long num, u32 base, volatile u16 **off) {
   if (num < 0)
     num = num * (-1);
   return write_int(num, base, off);
 }
 
-uint write_int10(long num, u16 *off) { return write_int(num, 10, off); }
+uint write_int10(long num, volatile u16 **off) { return write_int(num, 10, off); }
 
-uint write_ptr(ptr_t ptr, u16 *off) {
+uint write_ptr(ptr_t ptr, volatile u16 **off) {
   put_char('0', off);
-  put_char('x', off + 1);
-  return 2 + write_uint(ptr, 16, off + 2);
+  put_char('x', off);
+  return 2 + write_uint(ptr, 16, off);
 }
 
-uint write_float(double d, u16 *off) {
+uint write_float(double d, volatile u16 **off) {
   uint ret = write_int10((long)d, off);
-  put_char('.', off + ret);
+  put_char('.', off);
   u32 decimal_part = 0;
   do {
     d *= 10;
     decimal_part = (u32)d;
   } while ((u32)d > 0);
-  return ret + 1 + write_int10(decimal_part, off + ret + 1);
+  return ret + 1 + write_int10(decimal_part, off);
 }
 
-char handle_stage1(u16 **cursor, va_list *args, char format_char) {
+char handle_stage1(volatile u16 **cursor, va_list *args, char format_char) {
   switch (format_char) {
   case 's':
-    *cursor += write_str(va_arg(*args, char *), *cursor);
+    write_str(va_arg(*args, char *), cursor);
     break;
   case 'd':
-    *cursor += write_int10(va_arg(*args, int), *cursor);
+    write_int10(va_arg(*args, int), cursor);
     break;
   case 'u':
-    *cursor += write_uint(va_arg(*args, int), 10, *cursor);
+    write_uint(va_arg(*args, int), 10, cursor);
     break;
   case 'p':
-    *cursor += write_ptr(va_arg(*args, ptr_t), *cursor);
+    write_ptr(va_arg(*args, ptr_t), cursor);
     break;
   case 'f':
-    *cursor += write_float(va_arg(*args, double), *cursor);
+    write_float(va_arg(*args, double), cursor);
     break;
   case 'c':
-    put_char(va_arg(*args, int), *cursor);
-    *cursor += 1;
+    put_char(va_arg(*args, int), cursor);
     break;
   }
   return -1; // reset stage; in the future we might have more stages (e.g.
              // padding, floats, etc.)
 }
 
-static u16 *last_cursor_pos = VMEM_START;
-#pragma GCC diagnostic ignored "-Wincompatible-library-redeclaration"
+volatile static u16 *last_cursor_pos = VMEM_START;
+
 int printf(const char *format, ...) {
   if (!last_cursor_pos) { // I have no idea why this is, compilers are stupid
     last_cursor_pos = VMEM_START;
@@ -104,7 +117,7 @@ int printf(const char *format, ...) {
   va_list args;
   va_start(args, format);
 
-  unsigned short *cursor = last_cursor_pos;
+  volatile unsigned short *cursor = last_cursor_pos;
 
   uint i = 0;
   char stage = 0, cur_line = 0;
@@ -118,15 +131,8 @@ int printf(const char *format, ...) {
     case '%':
       stage++;
       break;
-    case '\n':
-      cursor += VGA_WIDTH - (cursor - VMEM_START) % VGA_WIDTH;
-      break;
-    case '\r':
-      cursor -= (cursor - VMEM_START) % VGA_WIDTH;
-      break;
     default:
-      put_char(format[i], cursor);
-      cursor++;
+      put_char(format[i], &cursor);
     }
   loopend:
     i++;
@@ -135,7 +141,7 @@ int printf(const char *format, ...) {
   last_cursor_pos = cursor;
   if (cursor > LAST_CHAR_ON_SCREEN) { // scroll one line up if we hit the bottom
     unsigned int last_dst = VMEM_START_CONST;
-    for (unsigned int dst = 0xB80a0; dst < LAST_CHAR_ON_SCREEN;
+    for (unsigned int dst = 0xB80a0; dst < (uint32_t)LAST_CHAR_ON_SCREEN;
          dst += VGA_WIDTH_BYTES) {
       asm("mov ecx, " CONST_TOSTR(VGA_WIDTH_BYTES) "\n\t"
                                                    "mov esi, %0\n\t"

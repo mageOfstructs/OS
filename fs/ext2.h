@@ -7,6 +7,7 @@
 #include "../math.h"
 #include "../utils.h"
 #include "../malloc.h"
+#include "../mem.h"
 #include <stdbool.h>
 
 #define EXT2_SIG 0xef53
@@ -87,7 +88,7 @@ typedef struct inode {
   uint32_t triply_iptr;
   uint32_t gen_num;
   uint32_t acl; // only avl if version >= 1
-  uint32_t hsize; // only avl if version >= 1
+  uint32_t hsize; // only avl if version >= 1 and feature is set
   uint32_t frag_ba;
   uint32_t os_specific2[3];
 } inode_t;

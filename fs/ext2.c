@@ -45,7 +45,7 @@ int read_block(superblock_t *sp, uint32_t bg, uint32_t block, uint16_t *ret) {
   return read(true, real_addr, get_block_size(sp), ret);
 }
 
-uint32_t read_inode(superblock_t *sp, bg_desc_t bgdt[], uint32_t inode_addr) {
+void read_inode(superblock_t *sp, bg_desc_t bgdt[], uint32_t inode_addr, inode_t *ret) {
   uint32_t block_group = (inode_addr - 1) / sp->inodes_per_bg;
   uint32_t bg_inodet_index = (inode_addr - 1) % sp->inodes_per_bg;
   uint32_t containing_block = (bg_inodet_index * inode_sz) / get_block_size(sp);
@@ -56,11 +56,12 @@ uint32_t read_inode(superblock_t *sp, bg_desc_t bgdt[], uint32_t inode_addr) {
   // printf("Inode table index: %d\n", bg_inodet_index);
   // printf("Reading block %d from block group %d\n", bgdt[block_group].inode_table_addr + containing_block, block_group);
   KASSERT(read_block(sp, block_group, bgdt[block_group].inode_table_addr + bg_inodet_index, inode_buf) == 0);
-  // for (int i = 0; i < get_block_size(sp); i++) {
-  //   if (inode_buf[i])
-  //     printf("%p ", inode_buf[i]);
-  // }
-  inode_t *i = &inode_buf[inode_start];
+  memcpy(&inode_buf[inode_start], ret, sizeof(inode_t));
+
+  kfree(inode_buf, get_block_size(sp));
+}
+
+void dbg_inode(superblock_t *sp, inode_t *i) {
   printf("Inode Type: %p\n", i->typeperm);
   printf("Inode Size: %d\n", i->lsize);
   int cur_ptr = 0;
@@ -80,12 +81,7 @@ uint32_t read_inode(superblock_t *sp, bg_desc_t bgdt[], uint32_t inode_addr) {
     cur_ptr++;
     printf("\n");
   }
-  // for (int i = 0; i < sizeof(dir_entry_t); i++) {
-  //   printf("%p ", dir_entry_buf[i]);
-  // }
-
   kfree(dir_entry_buf, get_block_size(sp));
-  kfree(inode_buf, get_block_size(sp));
 }
 
 
@@ -127,5 +123,7 @@ void init_fs() {
   // for (int i = inode_sz*1; i < sizeof(inode_t) + 0x80; i++)
   //   printf("%p ", inode_buf[i]);
 
-  read_inode(sp, bgdt, 2); // 2 is the inode of the root directory
+  inode_t tmp;
+  read_inode(sp, bgdt, 2, &tmp); // 2 is the inode of the root directory
+  dbg_inode(sp, &tmp);
 }

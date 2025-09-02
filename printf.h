@@ -23,7 +23,7 @@
 #define CONST_TOSTR(c) _CONST_TOSTR(c)
 
 int printf(const char *format, ...);
-uint write_str(const char *str, volatile u16 *off);
-void put_char(char c, volatile u16 *off);
+uint write_str(const char *str, volatile u16 **off);
+void put_char(char c, volatile u16 **off);
 
 #endif // !PRINTF_H
