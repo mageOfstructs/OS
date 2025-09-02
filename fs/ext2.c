@@ -52,11 +52,10 @@ void read_inode(superblock_t *sp, bg_desc_t bgdt[], uint32_t inode_addr, inode_t
 
   uint16_t *inode_buf = kalloc(get_block_size(sp));
   uint32_t inode_start = bg_inodet_index * inode_sz;
-  // printf("inode table lives at %p\n", bgdt[block_group].inode_table_addr);
-  // printf("Inode table index: %d\n", bg_inodet_index);
-  // printf("Reading block %d from block group %d\n", bgdt[block_group].inode_table_addr + containing_block, block_group);
-  KASSERT(read_block(sp, block_group, bgdt[block_group].inode_table_addr + bg_inodet_index, inode_buf) == 0);
-  memcpy(&inode_buf[inode_start], ret, sizeof(inode_t));
+  KASSERT(read_block(sp, block_group, bgdt[block_group].inode_table_addr,
+                     inode_buf) == 0);
+
+  memcpy(&inode_buf[inode_start / 2], ret, sizeof(inode_t));
 
   kfree(inode_buf, get_block_size(sp));
 }
