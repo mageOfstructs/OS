@@ -4,19 +4,23 @@ uint16_t sp_buf[1024];
 uint16_t inode_sz;
 bool dir_have_ti = false;
 
-static inline bool is_ext2_fs(superblock_t *sp) {
-  return sp->sig == EXT2_SIG;
-}
+static inline bool is_ext2_fs(superblock_t *sp) { return sp->sig == EXT2_SIG; }
 
 int is_fs_not_ok(superblock_t *sp) {
-  if (!is_ext2_fs(sp)) return 1;
-  if (sp->fs_state == 2) return 1;
-  if (sp->fs_state == 2 && sp->err_handling_method != 1) return 1;
+  if (!is_ext2_fs(sp))
+    return 1;
+  if (sp->fs_state == 2)
+    return 1;
+  if (sp->fs_state == 2 && sp->err_handling_method != 1)
+    return 1;
   if (sp->major_version >= 1) {
     printf("%p", sp->required_features);
-    if (sp->required_features & FEAT_REQ_COMP) return 2;
-    if (sp->required_features & FEAT_REQ_NEEDS_JOURNAL_REPLAY) return 4;
-    if (sp->required_features & FEAT_REQ_JOURNAL_DEV) return 5;
+    if (sp->required_features & FEAT_REQ_COMP)
+      return 2;
+    if (sp->required_features & FEAT_REQ_NEEDS_JOURNAL_REPLAY)
+      return 4;
+    if (sp->required_features & FEAT_REQ_JOURNAL_DEV)
+      return 5;
   }
   return 0;
 }
@@ -27,25 +31,26 @@ uint32_t get_number_of_bgs(superblock_t *sp) {
   return ret;
 }
 
-uint32_t get_block_size(superblock_t *sp) {
-  return 1024 << sp->log2_bs;
-}
+uint32_t get_block_size(superblock_t *sp) { return 1024 << sp->log2_bs; }
 
 inline uint32_t block_to_phys_addr(superblock_t *sp, uint32_t block_addr) {
   return block_addr * get_block_size(sp);
 }
 
 uint32_t get_inode_sz(superblock_t *sp) {
-  if (sp->major_version >= 1) return sp->inode_sz;
+  if (sp->major_version >= 1)
+    return sp->inode_sz;
   return 128;
 }
 
 int read_block(superblock_t *sp, uint32_t bg, uint32_t block, uint16_t *ret) {
-  uint32_t real_addr = bg * sp->blocks_per_bg * get_block_size(sp) + block * get_block_size(sp);
+  uint32_t real_addr =
+      bg * sp->blocks_per_bg * get_block_size(sp) + block * get_block_size(sp);
   return read(true, real_addr, get_block_size(sp), ret);
 }
 
-void read_inode(superblock_t *sp, bg_desc_t bgdt[], uint32_t inode_addr, inode_t *ret) {
+void read_inode(superblock_t *sp, bg_desc_t bgdt[], uint32_t inode_addr,
+                inode_t *ret) {
   uint32_t block_group = (inode_addr - 1) / sp->inodes_per_bg;
   uint32_t bg_inodet_index = (inode_addr - 1) % sp->inodes_per_bg;
   uint32_t containing_block = (bg_inodet_index * inode_sz) / get_block_size(sp);
@@ -66,7 +71,7 @@ void dbg_inode(superblock_t *sp, inode_t *i) {
   int cur_ptr = 0;
   uint16_t *dir_entry_buf = kalloc(get_block_size(sp));
   KASSERT(read_block(sp, 0, i->dptrs[0], dir_entry_buf) == 0);
-  dir_entry_t *dir_entry = (dir_entry_t*)dir_entry_buf;
+  dir_entry_t *dir_entry = (dir_entry_t *)dir_entry_buf;
   printf("Let's see what's inside the root directory:\n");
   while (((void *)dir_entry - (void *)dir_entry_buf) < get_block_size(sp)) {
     uint32_t name_length = dir_entry->lname_length |
@@ -90,7 +95,7 @@ void dbg_inode(superblock_t *sp, inode_t *i) {
 void init_fs() {
   // superblock_t sp;
   read(true, 1024, 1024, sp_buf);
-  superblock_t *sp = (superblock_t*)sp_buf;
+  superblock_t *sp = (superblock_t *)sp_buf;
 
   int fs_ok_ret = is_fs_not_ok(sp);
   if (fs_ok_ret) {
@@ -99,6 +104,7 @@ void init_fs() {
   }
 
   inode_sz = get_inode_sz(sp);
+  printf("Detected inode size as %d", inode_sz);
   dir_have_ti = sp->required_features & FEAT_REQ_DIR_HAS_TYPE ? 1 : 0;
 
   printf("Number of blocks: %d\n", sp->total_blocks);
@@ -110,11 +116,12 @@ void init_fs() {
   printf("Number of blocks per bgs: %d\n", sp->blocks_per_bg);
   printf("Version: %d.%d\n", sp->major_version, sp->min_version);
 
-  uint32_t bgdt_size = sizeof(bg_desc_t)*get_number_of_bgs(sp);
+  uint32_t bgdt_size = sizeof(bg_desc_t) * get_number_of_bgs(sp);
   bg_desc_t *bgdt = kalloc(bgdt_size);
   KASSERT(bgdt);
-  read(true, 2048, bgdt_size, bgdt);
-  printf("%d free inodes in block group 0\n", bgdt[0].unallocated_inodes_in_group);
+  read(true, 2048, bgdt_size, (uint16_t *)bgdt);
+  printf("%d free inodes in block group 0\n",
+         bgdt[0].unallocated_inodes_in_group);
   printf("%d directories in block group 0\n", bgdt[0].dirs_in_group);
   printf("inode table lives at %p\n", bgdt[0].inode_table_addr);
 
