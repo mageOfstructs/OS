@@ -68,21 +68,24 @@ void dbg_inode(superblock_t *sp, inode_t *i) {
   KASSERT(read_block(sp, 0, i->dptrs[0], dir_entry_buf) == 0);
   dir_entry_t *dir_entry = (dir_entry_t*)dir_entry_buf;
   printf("Let's see what's inside the root directory:\n");
-  while (cur_ptr < 2) {
-    uint32_t name_length = dir_entry->lname_length | (dir_have_ti ? 0 : (dir_entry->hname_length << 8));
-    // if (!name_length)
+  while (((void *)dir_entry - (void *)dir_entry_buf) < get_block_size(sp)) {
+    uint32_t name_length = dir_entry->lname_length |
+                           (dir_have_ti ? 0 : (dir_entry->hname_length << 8));
+    if (!name_length) // good enough for now
+      goto dir_print_loopend;
     printf("%d ", name_length);
 
     for (int i = 0; i < name_length; i++) {
       printf("%c", dir_entry->name[i]);
     }
-    dir_entry += (8 + name_length) + 4 - (8 + name_length) % 4;
-    cur_ptr++;
     printf("\n");
+  dir_print_loopend:
+    dir_entry =
+        (void *)dir_entry + (8 + name_length) + 4 - (8 + name_length) % 4;
+    cur_ptr++;
   }
   kfree(dir_entry_buf, get_block_size(sp));
 }
-
 
 void init_fs() {
   // superblock_t sp;
