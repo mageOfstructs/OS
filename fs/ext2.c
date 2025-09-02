@@ -1,10 +1,16 @@
 #include "ext2.h"
+#include "../string.h"
+#include <stdint.h>
 
 uint16_t sp_buf[1024];
-uint16_t inode_sz;
+uint16_t inode_sz, block_sz;
 bool dir_have_ti = false;
 
 static inline bool is_ext2_fs(superblock_t *sp) { return sp->sig == EXT2_SIG; }
+
+static inline bool is_dir(inode_t *i) {
+  return i->typeperm & 0x4000 ? true : false;
+}
 
 int is_fs_not_ok(superblock_t *sp) {
   if (!is_ext2_fs(sp))
@@ -65,7 +71,7 @@ void read_inode(superblock_t *sp, bg_desc_t bgdt[], uint32_t inode_addr,
   kfree(inode_buf, get_block_size(sp));
 }
 
-void dbg_inode(superblock_t *sp, inode_t *i) {
+void dbg_inode_dir(superblock_t *sp, inode_t *i) {
   printf("Inode Type: %p\n", i->typeperm);
   printf("Inode Size: %d\n", i->lsize);
   int cur_ptr = 0;
@@ -92,6 +98,74 @@ void dbg_inode(superblock_t *sp, inode_t *i) {
   kfree(dir_entry_buf, get_block_size(sp));
 }
 
+int get_inode_from_dir(superblock_t *sp, inode_t *dir, char *name,
+                       uint32_t name_length, uint32_t *ret) {
+  if (!is_dir(dir))
+    return -1;
+  int cur_ptr = 0;
+  uint16_t *dir_entry_buf = kalloc(get_block_size(sp));
+  printf("Let's see what's inside the root directory:\n");
+
+  // TODO: add indirect pointer support if ya want
+  for (int dptri = 0; dptri < 12; dptri++) {
+    KASSERT(read_block(sp, 0, dir->dptrs[dptri], dir_entry_buf) == 0);
+    dir_entry_t *dir_entry = (dir_entry_t *)dir_entry_buf;
+    while (((void *)dir_entry - (void *)dir_entry_buf) < get_block_size(sp)) {
+      uint32_t cur_dentry_name_length =
+          dir_entry->lname_length |
+          (dir_have_ti ? 0 : (dir_entry->hname_length << 8));
+      if (!cur_dentry_name_length) // good enough for now
+        goto dir_print_loopend;
+
+      if (name_length == cur_dentry_name_length &&
+          !strcmp(name, dir_entry->name)) {
+        *ret = dir_entry->inode;
+        return 0;
+      }
+    dir_print_loopend:
+      dir_entry = (void *)dir_entry + (8 + cur_dentry_name_length) + 4 -
+                  (8 + cur_dentry_name_length) % 4;
+      cur_ptr++;
+    }
+  }
+
+  kfree(dir_entry_buf, get_block_size(sp));
+  return 1;
+}
+
+int traverse(superblock_t *sp, bg_desc_t *bgdt, char *path, inode_t *start_dir,
+             inode_t *ret) {
+  uint32_t i = 0;
+  char *cur_name_start = path;
+  uint8_t backslash = 0;
+
+  inode_t *cur_inode = start_dir;
+  uint32_t cur_inode_num;
+
+  while (path[i]) {
+    switch (path[i]) {
+    case '\\':
+      backslash++;
+      break;
+    case '/':
+      if (backslash) {
+        backslash = 0;
+      } else {
+        path[i] = '\0';
+        i++;
+        if (get_inode_from_dir(sp, cur_inode, cur_name_start,
+                               i - (uint32_t)cur_name_start, &cur_inode_num))
+          return 1;
+        read_inode(sp, bgdt, cur_inode_num, cur_inode);
+        cur_name_start = path + i;
+      }
+    }
+    i++;
+  }
+
+  return 1;
+}
+
 void init_fs() {
   // superblock_t sp;
   read(true, 1024, 1024, sp_buf);
@@ -104,6 +178,7 @@ void init_fs() {
   }
 
   inode_sz = get_inode_sz(sp);
+  block_sz = get_block_size(sp);
   printf("Detected inode size as %d", inode_sz);
   dir_have_ti = sp->required_features & FEAT_REQ_DIR_HAS_TYPE ? 1 : 0;
 
@@ -134,5 +209,5 @@ void init_fs() {
 
   inode_t tmp;
   read_inode(sp, bgdt, 2, &tmp); // 2 is the inode of the root directory
-  dbg_inode(sp, &tmp);
+  dbg_inode_dir(sp, &tmp);
 }
