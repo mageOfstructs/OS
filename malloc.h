@@ -2,8 +2,8 @@
 #define MALLOC_H
 
 #include "binops.h"
-#include "vm.h"
 #include "utils.h"
+#include "vm.h"
 #include <stdint.h>
 
 typedef struct alloc {
@@ -19,6 +19,7 @@ int dealloc_ctx(alloc_t *a, void *start, uint32_t sz);
 
 void init_kalloc(char *start, uint32_t sz);
 void *kalloc(uint32_t sz);
+void *krealloc(void *ptr, uint32_t old_sz, uint32_t new_sz);
 int kfree(void *start, uint32_t sz);
 
 #endif // !MALLOC_H
