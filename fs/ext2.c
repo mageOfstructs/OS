@@ -51,11 +51,17 @@ static inline uint32_t get_inode_sz(superblock_t *sp) {
 int __read_block(fs_ext2_ctx_t *ctx, uint32_t bg, uint32_t block, uint16_t *ret) {
   uint32_t real_addr =
       bg * ctx->sp->blocks_per_bg * ctx->block_sz + block * ctx->block_sz;
-  return read(true, real_addr, ctx->block_sz, ret);
+  return read_ata(true, real_addr, ctx->block_sz, ret);
 }
 
 int read_block(uint32_t bg, uint32_t block, uint16_t *ret) {
   return __read_block(&FS_GLOBAL_CTX, bg, block, ret);
+}
+
+int read_block_addr(uint32_t block, uint16_t *ret) {
+  uint32_t bg = block / FS_GLOBAL_CTX.sp->blocks_per_bg;
+  uint32_t bg_off = block % FS_GLOBAL_CTX.sp->blocks_per_bg;
+  return read_block(bg, bg_off, ret);
 }
 
 void __read_inode(fs_ext2_ctx_t *ctx, uint32_t inode_addr,
@@ -175,6 +181,7 @@ int __traverse(fs_ext2_ctx_t *ctx, char *path, inode_t *start_dir,
     i++;
   }
 
+  *ret = *cur_inode;
   return 1;
 }
 
@@ -205,7 +212,7 @@ int read_from_inode(uint32_t inode, int block_cnt, void *ret) {
 
 void init_fs() {
   // superblock_t sp;
-  read(true, 1024, 1024, sp_buf);
+  read_ata(true, 1024, 1024, sp_buf);
   superblock_t *sp = (superblock_t *)sp_buf;
 
   int fs_ok_ret = is_fs_not_ok(sp);
@@ -233,7 +240,7 @@ void init_fs() {
   uint32_t bgdt_size = sizeof(bg_desc_t) * get_number_of_bgs(sp);
   bg_desc_t *bgdt = kalloc(bgdt_size);
   KASSERT(bgdt);
-  read(true, 2048, bgdt_size, (uint16_t *)bgdt);
+  read_ata(true, 2048, bgdt_size, (uint16_t *)bgdt);
   FS_GLOBAL_CTX.bgdt = bgdt;
   printf("%d free inodes in block group 0\n",
          bgdt[0].unallocated_inodes_in_group);
@@ -247,7 +254,47 @@ void init_fs() {
   // for (int i = inode_sz*1; i < sizeof(inode_t) + 0x80; i++)
   //   printf("%p ", inode_buf[i]);
 
-  inode_t tmp;
-  read_inode(2, &tmp); // 2 is the inode of the root directory
-  dbg_inode_dir(&FS_GLOBAL_CTX, &tmp);
+  read_inode(2, &FS_GLOBAL_CTX.root); // 2 is the inode of the root directory
+  dbg_inode_dir(&FS_GLOBAL_CTX, &FS_GLOBAL_CTX.root);
+}
+
+fildes_t open_ext2(char *path, uint8_t perms) {
+  inode_t *i = kalloc(sizeof(inode_t));
+  if (!i) return NULL_FD;
+  if (traverse(path, FS_GLOBAL_CTX.root, i)) return NULL_FD;
+  fildes_t ret = {
+    .cursor = 0, .sz = i->lsize, .type = EXT2_FILE_TYPE, .perms = perms, .data = { .ext2_data = { .inode = i, .buf = NULL, .buf_sz = 0, .bitmap = 0 } }
+  };
+  return ret;
+}
+
+int read_ext2(fildes_t *fildes, uint32_t n, void *ret) {
+  fildes_data_ext2_t *data = &fildes->data.ext2_data;
+  uint32_t needed_bufsz = ceild(fildes->cursor + n, FS_GLOBAL_CTX.block_sz);
+  if (!data->buf) {
+    data->buf_sz = needed_bufsz;
+    data->buf = kalloc(needed_bufsz * FS_GLOBAL_CTX.block_sz);
+  } else if (data->buf_sz < ceild(n, FS_GLOBAL_CTX.block_sz)) {
+    data->buf = krealloc(data->buf, data->buf_sz, ceild(n, FS_GLOBAL_CTX.block_sz) * FS_GLOBAL_CTX.block_sz); 
+    data->buf_sz = ceild(n, FS_GLOBAL_CTX.block_sz);
+  }
+
+  uint32_t cur_cursor = fildes->cursor;
+  uint32_t blocki;
+  while (cur_cursor < (fildes->cursor + n + FS_GLOBAL_CTX.block_sz)) {
+    blocki = cur_cursor / FS_GLOBAL_CTX.block_sz;
+    if (!get_bit(&data->bitmap, cur_cursor)) {
+      read_block_addr(data->inode->dptrs[blocki], data->buf[blocki]);
+    }
+    cur_cursor += FS_GLOBAL_CTX.block_sz;
+  }
+  
+  int memcpy_ret = memcpy(&data->buf[fildes->cursor / FS_GLOBAL_CTX.block_sz] + fildes->cursor % FS_GLOBAL_CTX.block_sz, ret, n);
+  if (memcpy_ret != -1) fildes->cursor += n;
+  return memcpy_ret;
+}
+
+void close_ext2(fildes_t *fildes) {
+  if (fildes->data.ext2_data.buf_sz) kfree(fildes->data.ext2_data.buf, fildes->data.ext2_data.buf_sz * FS_GLOBAL_CTX.block_sz);
+  kfree(fildes->data.ext2_data.inode, sizeof(inode_t));
 }

@@ -3,6 +3,7 @@
 
 #include "binops.h"
 #include "vm.h"
+#include "utils.h"
 #include <stdint.h>
 
 typedef struct alloc {

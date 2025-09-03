@@ -3,7 +3,7 @@
 #include "serial.h"
 #include <stdarg.h>
 
-// extern void prtint(u32 num, u32 base, u16 *off);
+volatile static u16 *last_cursor_pos = VMEM_START;
 
 void put_char(char c, volatile u16 **cursor) { 
   switch (c) {
@@ -27,6 +27,12 @@ uint write_str(const char *str, volatile u16 **off) {
     i++;
   }
   return i;
+}
+
+void display_str(const char *str, uint32_t len) {
+  for (int i = 0; i < len; i++) {
+    put_char(str[i], &last_cursor_pos);
+  }
 }
 
 uint write_int(long num, uint base, volatile u16 **off) {
@@ -107,8 +113,6 @@ char handle_stage1(volatile u16 **cursor, va_list *args, char format_char) {
   return -1; // reset stage; in the future we might have more stages (e.g.
              // padding, floats, etc.)
 }
-
-volatile static u16 *last_cursor_pos = VMEM_START;
 
 int printf(const char *format, ...) {
   if (!last_cursor_pos) { // I have no idea why this is, compilers are stupid

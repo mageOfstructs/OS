@@ -1,4 +1,5 @@
 #include "idt.h"
+#include "printf.h"
 #include <stdbool.h>
 #include <stdint.h>
 

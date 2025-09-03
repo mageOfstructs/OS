@@ -1,5 +1,6 @@
 #include "malloc.h"
 #include "printf.h"
+#include "mem.h"
 
 void dbg_print_bitmap(alloc_t *a) {
   for (int i = 0; i < a->bitmap_sz; i++) {
@@ -44,6 +45,16 @@ void *alloc_ctx(alloc_t *a, uint32_t sz) {
   return NULL;
 }
 
+void *realloc_ctx(alloc_t *a, void *ptr, uint32_t old_sz, uint32_t new_sz) {
+  // very sketchy thing happens here
+  // TODO: if we have an adjacent free space that is sufficient, we don't need to do this
+  dealloc_ctx(a, ptr, old_sz);
+  void *new_ptr = alloc_ctx(a, new_sz);
+  KASSERT(new_ptr); // bad things happen when this triggers
+  memcpy(ptr, new_ptr, old_sz);
+  return new_ptr;
+}
+
 int dealloc_ctx(alloc_t *a, void *start, uint32_t sz) {
   // printf("malloc: deallocating %d bytes starting from %p\n", sz, start - a->heap_start);
   uint32_t bitmap_i = (uint32_t)(start - a->heap_start);
@@ -66,6 +77,10 @@ void init_kalloc(char *start, uint32_t sz) {
 
 void *kalloc(uint32_t sz) {
   return alloc_ctx(&kalloc_alloc, sz);
+}
+
+void *krealloc(void *ptr, uint32_t old_sz, uint32_t new_sz) {
+  return realloc_ctx(&kalloc_alloc, ptr, old_sz, new_sz);
 }
 
 int kfree(void *start, uint32_t sz) {

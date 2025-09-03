@@ -106,8 +106,16 @@ typedef struct fs_ext2_ctx {
   bg_desc_t *bgdt;
   uint16_t inode_sz;
   uint16_t block_sz;
+  inode_t *root;
   bool dir_have_ti;
 } fs_ext2_ctx_t;
+
+typedef struct fildes_data_ext2 {
+  inode_t *inode;
+  uint8_t *buf;
+  uint32_t buf_sz; // in blocks
+  uint32_t bitmap;
+} fildes_data_ext2_t;
 
 #define FEAT_OPT_PREALLOC_BLOCKS 0x1
 #define FEAT_OPT_AFS 0x2
@@ -124,5 +132,11 @@ typedef struct fs_ext2_ctx {
 #define FEAT_RO_SPARSE 0x1
 #define FEAT_RO_SIZE64 0x2
 #define FEAT_RO_DIR_BINTREE 0x4
+
+#include "../fildes.h"
+fildes_t open_ext2(char *path, uint8_t perms);
+int read_ext2(fildes_t *fildes, uint32_t n, void *ret);
+void close_ext2(fildes_t *fildes);
+void init_fs();
 
 #endif // !EXT2_H

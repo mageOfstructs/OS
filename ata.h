@@ -24,5 +24,5 @@
 int identify(uint16_t buf[256]);
 uint32_t get_lba_cnt(uint16_t identify_data[256]);
 bool lba48_support(uint16_t identify_data[256]);
-int read(bool read_master, uint32_t addr, uint32_t size, uint16_t *buf);
+int read_ata(bool read_master, uint32_t addr, uint32_t size, uint16_t *buf);
 #endif // !ATA_H

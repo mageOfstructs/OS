@@ -8,4 +8,5 @@ int memcpy(const void *src, void *dst, size_t s) {
       "mov esi, %1\n\t"
       "mov edi, %2\n\t"
       "rep; movsb\n\t" :: "gr"(s), "m"(src), "m"(dst) : "ecx", "esi", "edi");
+  return s;
 }
