@@ -1,8 +1,8 @@
 #include "vm.h"
+#include "malloc.h"
 #include "phys_alloc.h"
 #include "printf.h"
 #include "utils.h"
-#include "malloc.h"
 #include <stdint.h>
 
 static uint32_t page_dir[1024] __attribute__((aligned(4096)));
@@ -195,11 +195,12 @@ void enable_paging(void) {
   // dbg_llist_rev();
   // int map_status = vm_map(0x12345678, 2);
   // printf("vm_map status: %d\n", map_status);
-  // printf("physaddr of 0x12345678 is: %p\n", get_physaddr((void *)0x12345678));
-  // printf(" done %p %p\n", &(((uint32_t *)page_dir[72])[837]),
+  // printf("physaddr of 0x12345678 is: %p\n", get_physaddr((void
+  // *)0x12345678)); printf(" done %p %p\n", &(((uint32_t *)page_dir[72])[837]),
   //        ((uint32_t *)page_dir[72])[837]);
-  // printf("physaddr of 0x12346678 is: %p\n", get_physaddr((void *)0x12346678));
-  // printf("physaddr of 0x12347678 is: %p\n", get_physaddr((void *)0x12347678));
+  // printf("physaddr of 0x12346678 is: %p\n", get_physaddr((void
+  // *)0x12346678)); printf("physaddr of 0x12347678 is: %p\n",
+  // get_physaddr((void *)0x12347678));
   //
   // vm_unmap(0x12347678, 1);
   // vm_unmap(0x12345678, 2);
@@ -236,9 +237,9 @@ void setup_vm(void) {
   const uint32_t VM_HEAP_START = 0x00900000;
   init_physalloc(0x00800000, VM_HEAP_START);
   enable_paging();
-  
-  KASSERT(vm_map(VM_HEAP_START, 1) == 0);
-  init_kalloc((char*)VM_HEAP_START, 4096);
+
+  KASSERT(vm_map(VM_HEAP_START, 2) == 0);
+  init_kalloc((char *)VM_HEAP_START, 8192);
   // Test code, yes this is a very good way to do testing
   // int *test = kalloc(4);
   // *test = 4;
