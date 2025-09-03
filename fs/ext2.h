@@ -101,6 +101,14 @@ typedef struct dir_entry {
   char name[];
 } dir_entry_t;
 
+typedef struct fs_ext2_ctx {
+  superblock_t *sp;
+  bg_desc_t *bgdt;
+  uint16_t inode_sz;
+  uint16_t block_sz;
+  bool dir_have_ti;
+} fs_ext2_ctx_t;
+
 #define FEAT_OPT_PREALLOC_BLOCKS 0x1
 #define FEAT_OPT_AFS 0x2
 #define FEAT_OPT_JOURNAL 0x4
