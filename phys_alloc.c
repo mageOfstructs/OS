@@ -43,7 +43,8 @@ void init_physalloc(uint32_t heap_start, uint32_t heap_end) {
   freelist_nodes = (llist_node_fb *)(freelist_buf + 1);
 
   llist_t_fb freelist = LIST_INIT;
-  free_block_t init_fb = {.start = (void *)heap_start, .page_off = 0,
+  free_block_t init_fb = {.start = (void *)heap_start,
+                          .page_off = 0,
                           .sz = (heap_end - heap_start) / 4096};
   alloc = init_alloc(freelist_nodes, 2048);
 
@@ -56,14 +57,16 @@ void init_physalloc(uint32_t heap_start, uint32_t heap_end) {
   llist_pushb_fb(&freelist, node_space);
 
   *freelist_buf = freelist;
-  printf("init_physalloc: range %p-%p (%d pages)\n", heap_start, heap_end, init_fb.sz);
+  printf("init_physalloc: range %p-%p (%d pages)\n", heap_start, heap_end,
+         init_fb.sz);
 }
 
 void llist_fb_sorted_insert(llist_node_fb *n);
 
 int combine_fbs(llist_node_fb *cur, llist_node_fb *n) {
   if (cur->val.page_off == n->val.page_off - cur->val.sz) {
-    printf("a %p %d , %p %d\n", cur->val.start, cur->val.sz, n->val.start, n->val.sz);
+    printf("a %p %d , %p %d\n", cur->val.start, cur->val.sz, n->val.start,
+           n->val.sz);
     cur->val.sz += n->val.sz;
     llist_node_fb_remove(freelist_buf, cur);
     // dbg_llist_rev();
@@ -160,7 +163,8 @@ void *phys_alloc(uint16_t n) {
       // else
       //   printf("tail empty\n");
       if (cur->val.sz > n) {
-        free_block_t remaining = {.start = cur->val.start + n * 4096, .page_off = cur->val.page_off + n,
+        free_block_t remaining = {.start = cur->val.start + n * 4096,
+                                  .page_off = cur->val.page_off + n,
                                   .sz = cur->val.sz - n};
         llist_node_fb remaining_n = NODE_INIT(remaining);
         llist_node_fb *remaining_ptr = alloc_node();
@@ -177,7 +181,7 @@ void *phys_alloc(uint16_t n) {
       KASSERT(dealloc_ctx(&alloc, cur, sizeof(llist_node_fb)) == 0);
       dbg_llist();
       dbg_llist_rev();
-      // printf("phys_alloc: allocated page %p\n", ret);
+      printf("phys_alloc: allocated page %p\n", ret);
       return ret;
     }
     cur = llist_node_fb_offset(cur, off);
@@ -190,7 +194,10 @@ void phys_dealloc(void *allocation) {
   void *start = (void *)(phys_alloc & ~0xFFF);
   uint32_t size = (phys_alloc & 0xFFF) + 1;
   printf("Creating new free block at %p with %d pages\n", start, size);
-  free_block_t new_free = {.start = start, .page_off = ((uint32_t)start - phys_heap_start) / 4096, .sz = size};
+  free_block_t new_free = {.start = start,
+                           .page_off =
+                               ((uint32_t)start - phys_heap_start) / 4096,
+                           .sz = size};
   llist_node_fb new_free_n = NODE_INIT(new_free);
   llist_node_fb *new_free_nspace = alloc_node();
   KASSERT(new_free_nspace);

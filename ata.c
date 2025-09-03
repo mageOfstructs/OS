@@ -92,7 +92,7 @@ void read_internal(uint32_t lba, uint8_t sec_cnt, uint16_t *buf) {
 // easy API for reading bytes into buf
 // addr is starting address in bytes (must be aligned to BYTES_PER_SECTOR for now)
 // size is the size of sectors in bytes
-int read(bool read_master, uint32_t addr, uint32_t size, uint16_t *buf) {
+int read_ata(bool read_master, uint32_t addr, uint32_t size, uint16_t *buf) {
   if (!read_master) {
     printf("read: TODO!\n");
     return -1;

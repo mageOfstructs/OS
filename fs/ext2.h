@@ -3,11 +3,11 @@
 
 #include "../ata.h"
 #include "../binops.h"
-#include "../printf.h"
-#include "../math.h"
-#include "../utils.h"
 #include "../malloc.h"
+#include "../math.h"
 #include "../mem.h"
+#include "../printf.h"
+#include "../utils.h"
 #include <stdbool.h>
 
 #define EXT2_SIG 0xef53
@@ -26,21 +26,21 @@ typedef struct superblock {
   uint32_t inodes_per_bg;
   uint32_t last_mount; // UNIX timestamp
   uint32_t last_write; // UNIX timestamp
-  uint16_t number_of_mounts_since_last_consistency_check; 
-  uint16_t number_of_mounts_before_consistency_check; 
+  uint16_t number_of_mounts_since_last_consistency_check;
+  uint16_t number_of_mounts_before_consistency_check;
   uint16_t sig; // should be equal to EXT2_SIG
   uint16_t fs_state;
   uint16_t err_handling_method;
   uint16_t min_version;
-  uint32_t last_consistency_check; // UNIX timestamp
-  uint32_t internal_between_consistency_checks; // UNIX time 
+  uint32_t last_consistency_check;              // UNIX timestamp
+  uint32_t internal_between_consistency_checks; // UNIX time
   uint32_t os_id;
   uint32_t major_version;
   uint16_t uid_that_can_use_reserved_blocks;
   uint16_t gid_that_can_use_reserved_blocks;
   // extended fields available after version 1
   uint32_t first_non_reserved_inode; // in versions <= 1 this is 11
-  uint16_t inode_sz; // in bytes, in versions <= 1 this is 128
+  uint16_t inode_sz;                 // in bytes, in versions <= 1 this is 128
   uint16_t superblock_bg_backup;
   uint32_t opt_features;
   uint32_t required_features;
@@ -73,13 +73,13 @@ typedef struct inode {
   uint16_t typeperm;
   uint16_t uid;
   uint32_t lsize;
-  uint32_t last_access; // UNIX Timestamp
-  uint32_t creation; // UNIX Timestamp
+  uint32_t last_access;       // UNIX Timestamp
+  uint32_t creation;          // UNIX Timestamp
   uint32_t last_modification; // UNIX Timestamp
-  uint32_t deletion_time; // UNIX Timestamp
+  uint32_t deletion_time;     // UNIX Timestamp
   uint16_t gid;
   uint16_t hardlnk_cnt; // hardlinks to this inode
-  uint32_t sec_cnt; // sectors used by this inode
+  uint32_t sec_cnt;     // sectors used by this inode
   uint32_t flags;
   uint32_t os_specific;
   uint32_t dptrs[12];
@@ -87,7 +87,7 @@ typedef struct inode {
   uint32_t doubly_iptr;
   uint32_t triply_iptr;
   uint32_t gen_num;
-  uint32_t acl; // only avl if version >= 1
+  uint32_t acl;   // only avl if version >= 1
   uint32_t hsize; // only avl if version >= 1 and feature is set
   uint32_t frag_ba;
   uint32_t os_specific2[3];
@@ -97,7 +97,8 @@ typedef struct dir_entry {
   uint32_t inode;
   uint16_t entry_sz;
   uint8_t lname_length; // least significant 8 bits of name length
-  uint8_t hname_length; // most significant 8 bits of name length, or Type Indicator if corresponding feature bit is set
+  uint8_t hname_length; // most significant 8 bits of name length, or Type
+                        // Indicator if corresponding feature bit is set
   char name[];
 } dir_entry_t;
 
@@ -106,6 +107,7 @@ typedef struct fs_ext2_ctx {
   bg_desc_t *bgdt;
   uint16_t inode_sz;
   uint16_t block_sz;
+  inode_t *root;
   bool dir_have_ti;
 } fs_ext2_ctx_t;
 
@@ -124,5 +126,7 @@ typedef struct fs_ext2_ctx {
 #define FEAT_RO_SPARSE 0x1
 #define FEAT_RO_SIZE64 0x2
 #define FEAT_RO_DIR_BINTREE 0x4
+
+int traverse(char *path, inode_t *start_dir, inode_t *ret);
 
 #endif // !EXT2_H

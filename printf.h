@@ -2,6 +2,8 @@
 
 #define PRINTF_H
 
+#include <stdint.h>
+
 #define uint unsigned long
 #define u16 unsigned short
 #define u32 unsigned long
@@ -23,7 +25,7 @@
 #define CONST_TOSTR(c) _CONST_TOSTR(c)
 
 int printf(const char *format, ...);
-uint write_str(const char *str, volatile u16 **off);
+void display_str(const char *str, uint32_t len);
 void put_char(char c, volatile u16 **off);
 
 #endif // !PRINTF_H
