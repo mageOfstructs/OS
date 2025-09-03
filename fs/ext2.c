@@ -76,11 +76,11 @@ void __read_inode(fs_ext2_ctx_t *ctx, uint32_t inode_addr, inode_t *ret) {
   uint16_t *inode_buf = kalloc(ctx->block_sz);
   uint32_t inode_start = bg_inodet_index * ctx->inode_sz;
   KASSERT(__read_block(ctx, block_group,
-                       ctx->bgdt[block_group].inode_table_addr,
+                       ctx->bgdt[block_group].inode_table_addr +
+                           (inode_start / ctx->block_sz),
                        inode_buf) == 0);
 
-  memcpy(&inode_buf[inode_start / 2], ret, sizeof(inode_t));
-
+  memcpy(&inode_buf[(inode_start % ctx->block_sz) / 2], ret, sizeof(inode_t));
   kfree(inode_buf, ctx->block_sz);
 }
 
