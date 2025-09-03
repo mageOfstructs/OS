@@ -123,11 +123,13 @@ int __get_inode_from_dir(fs_ext2_ctx_t *ctx, inode_t *dir, char *name,
     return -1;
   int cur_ptr = 0;
   uint16_t *dir_entry_buf = kalloc(ctx->block_sz);
+  KASSERT(dir_entry_buf);
   printf("Let's see what's inside the root directory:\n");
 
   // TODO: add indirect pointer support if ya want
   for (int dptri = 0; dptri < 12; dptri++) {
-    KASSERT(__read_block(ctx, 0, dir->dptrs[dptri], dir_entry_buf) == 0);
+    // TODO: ctx version of this
+    KASSERT(read_block_addr(dir->dptrs[dptri], dir_entry_buf) == 0);
     dir_entry_t *dir_entry = (dir_entry_t *)dir_entry_buf;
     while (((void *)dir_entry - (void *)dir_entry_buf) < ctx->block_sz) {
       uint32_t cur_dentry_name_length =
@@ -263,4 +265,8 @@ void init_fs() {
 
   read_inode(2, FS_GLOBAL_CTX.root); // 2 is the inode of the root directory
   dbg_inode_dir(&FS_GLOBAL_CTX, FS_GLOBAL_CTX.root);
+  uint32_t hello_inum;
+  printf("awa");
+  get_inode_from_dir(FS_GLOBAL_CTX.root, "hello", 5, &hello_inum);
+  printf("Hello inode: %d\n", hello_inum);
 }
