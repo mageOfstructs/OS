@@ -1,11 +1,16 @@
 #include "ata.h"
+#include "fildes.h"
+#include "fs/ext2.h"
 #include "idt.h"
+#include "mem.h"
 #include "pic.h"
 #include "printf.h"
-#include "vm.h"
-#include "fs/ext2.h"
 #include "serial.h"
+#include "utils.h"
+#include "vm.h"
 #include <stdint.h>
+
+STRUCT_EQ(fildes_t);
 
 static uint64_t GDT[3];
 static uint8_t GDTR[6];
@@ -45,6 +50,17 @@ int main() {
     init_fs();
     printf("Made it out alive!");
   }
+
+  fildes_t hello_fd = open_ext2("hello", 0); // perms are not implemented yet
+  if (fildes_t_cmp(&hello_fd, &NULL_FD)) {
+    printf("open failed!\n");
+    return 0;
+  }
+  char file_content[64];
+  memset(&file_content, 0, 64);
+  KASSERT(read(&hello_fd, 32, file_content) == 32);
+  printf("%s\n", file_content);
+  close_ext2(&hello_fd);
 
   // enable_cursor(0, 15);
   // *((int *)0xb8000) = 0x07690748;
