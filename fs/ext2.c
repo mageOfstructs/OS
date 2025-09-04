@@ -197,7 +197,9 @@ int __traverse(fs_ext2_ctx_t *ctx, char *path, inode_t *start_dir,
         path[i] = '\0';
         i++;
         if (__get_inode_from_dir(ctx, cur_inode, cur_name_start,
-                                 i - (uint32_t)cur_name_start, &cur_inode_num))
+                                 i - (uint32_t)cur_name_start + (uint32_t)path -
+                                     1,
+                                 &cur_inode_num)) {
           return 1;
         __read_inode(ctx, cur_inode_num, cur_inode);
         cur_name_start = path + i;
@@ -207,17 +209,14 @@ int __traverse(fs_ext2_ctx_t *ctx, char *path, inode_t *start_dir,
   }
 
   *ret = *cur_inode;
-  return 1;
+  return 0;
 }
 
 int traverse(char *path, inode_t *start_dir, inode_t *ret) {
   return __traverse(&FS_GLOBAL_CTX, path, start_dir, ret);
 }
 
-int __read_from_inode(fs_ext2_ctx_t *ctx, uint32_t inode, int block_cnt,
-                      void *ret) {
-  inode_t i;
-  read_inode(inode, &i);
+int __read_from_inode(fs_ext2_ctx_t *ctx, inode_t i, int block_cnt, void *ret) {
   printf("Inode Type: %p\n", i.typeperm);
   printf("Inode Size: %p\n", i.lsize);
   int cur = 0;
@@ -236,11 +235,12 @@ int __read_from_inode(fs_ext2_ctx_t *ctx, uint32_t inode, int block_cnt,
 }
 
 int read_from_inode(uint32_t inode, int block_cnt, void *ret) {
-  return __read_from_inode(&FS_GLOBAL_CTX, inode, block_cnt, ret);
+  inode_t i;
+  read_inode(inode, &i);
+  return __read_from_inode(&FS_GLOBAL_CTX, i, block_cnt, ret);
 }
 
 void init_fs() {
-  // superblock_t sp;
   read_ata(true, 1024, 1024, sp_buf);
   superblock_t *sp = (superblock_t *)sp_buf;
 
@@ -284,13 +284,20 @@ void init_fs() {
   //   printf("%p ", inode_buf[i]);
 
   read_inode(2, FS_GLOBAL_CTX.root); // 2 is the inode of the root directory
+
   dbg_inode_dir(&FS_GLOBAL_CTX, FS_GLOBAL_CTX.root);
   uint32_t hello_inum;
   printf("awa");
-  get_inode_from_dir(FS_GLOBAL_CTX.root, "hello", 5, &hello_inum);
+  inode_t hello_node;
+  KASSERT(traverse("hello/", FS_GLOBAL_CTX.root, &hello_node) == 0);
+  // get_inode_from_dir(FS_GLOBAL_CTX.root, "hello", 5, &hello_inum);
   printf("Hello inode: %d\n", hello_inum);
   void *buf = kalloc(FS_GLOBAL_CTX.block_sz);
   memset(buf, 0, FS_GLOBAL_CTX.block_sz);
-  printf("read %d blocks\n", read_from_inode(hello_inum, 1, buf));
-  printf("%s", (char *)buf);
+  printf("read %d blocks\n",
+         __read_from_inode(&FS_GLOBAL_CTX, hello_node, 1, buf));
+  printf("%s\n", (char *)buf);
+  // read_from_inode(12, 1, buf);
+  // printf("%s", (char *)buf);
+  kfree(buf, FS_GLOBAL_CTX.block_sz);
 }
