@@ -36,8 +36,10 @@ int read_ext2(fildes_t *fildes, uint32_t n, void *ret) {
   uint32_t blocki;
   while (cur_cursor < (fildes->cursor + n + FS_GLOBAL_CTX.block_sz)) {
     blocki = cur_cursor / FS_GLOBAL_CTX.block_sz;
-    if (!get_bit((uint8_t *)&data->bitmap, cur_cursor)) {
-      read_block_addr(data->inode->dptrs[blocki], data->buf[blocki]);
+    if (!get_bit((uint8_t *)&data->bitmap, blocki)) {
+      set_bit((uint8_t *)&data->bitmap, blocki);
+      read_block_addr(data->inode->dptrs[blocki],
+                      (uint16_t *)&data->buf[blocki * FS_GLOBAL_CTX.block_sz]);
     }
     cur_cursor += FS_GLOBAL_CTX.block_sz;
   }
