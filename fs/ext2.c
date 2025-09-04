@@ -6,6 +6,13 @@
 static uint16_t sp_buf[1024];
 fs_ext2_ctx_t FS_GLOBAL_CTX;
 
+void dump_block(void *b) {
+  for (int i = 0; i < FS_GLOBAL_CTX.block_sz; i++) {
+    printf("%p ", ((char *)b)[i]);
+  }
+  printf("\n");
+}
+
 static inline bool is_ext2_fs(superblock_t *sp) { return sp->sig == EXT2_SIG; }
 
 static inline bool is_dir(inode_t *i) {

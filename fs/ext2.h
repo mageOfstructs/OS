@@ -127,6 +127,9 @@ typedef struct fs_ext2_ctx {
 #define FEAT_RO_SIZE64 0x2
 #define FEAT_RO_DIR_BINTREE 0x4
 
+void dump_block(void *b);
+int read_block_addr(uint32_t block, uint16_t *ret);
+void init_fs();
 int traverse(char *path, inode_t *start_dir, inode_t *ret);
 
 #endif // !EXT2_H
