@@ -6,43 +6,54 @@
 #include "pic.h"
 #include "printf.h"
 #include "serial.h"
+#include "usermode.h"
 #include "utils.h"
 #include "vm.h"
 #include <stdint.h>
 
 STRUCT_EQ(fildes_t);
 
-static uint64_t GDT[3];
+static uint64_t GDT[6];
 static uint8_t GDTR[6];
 
 int main() {
-  // relocate the GDT as setup_vm would otherwise overwrite it with a page table
-  // NOTE: This is not a permanent solution! It could be that the kernel grows
-  // so big it's code would overlap with the bootsector and overwrite it when it
-  // is loaded into memory.
+  // setup GDTR
   uint32_t gdt_addr = (uint32_t)GDT;
   for (int i = 0; i < 4; i++) {
     GDTR[i + 2] = (gdt_addr >> i * 8) & 0xFF;
   }
-  asm("mov ecx, 8*3\n\t"
+  *((uint16_t *)GDTR) = 48; // six GDT entries
+  printf("%p %d\n", GDTR, *((uint16_t *)GDTR));
+
+  setup_tss((gdte_t *)&GDT[5]);
+  printf("%p %d\n", GDTR, *((uint16_t *)GDTR));
+
+  // relocate the GDT as setup_vm would otherwise overwrite it with a page table
+  // NOTE: This is not a permanent solution! It could be that the kernel grows
+  // so big it's code would overlap with the bootsector and overwrite it when it
+  // is loaded into memory.
+  asm("mov ecx, 8*5\n\t"
       "mov esi, 0x7c42\n\t"
       "mov edi, %0\n\t"
       "rep; movsb\n\t"
-      "mov ecx, 2\n\t"
-      "mov esi, 0x7c5a\n\t"
-      "mov edi, %1\n\t"
-      "rep; movsb\n\t"
-      "lgdt %2" ::"g"(GDT),
-      "g"(GDTR), "m"(GDTR));
-  // printf("GDTR size: %d", (GDTR[0] << 8) | GDTR[1]);
+      // "mov ecx, 2\n\t"
+      // "mov esi, 0x7c5a\n\t"
+      // "mov edi, %1\n\t"
+      // "rep; movsb\n\t"
+      "lgdt %1\n\t"
+      "mov ax, 0x28\n\t" // load TSS
+      "ltr ax\n\t" ::"g"(GDT),
+      "m"(GDTR));
+
   init_serial();
   PIC_remap(0x20, 0x28);
   idt_init();
   setup_vm();
 
+  // jump_usermode();
+
   uint16_t buf[256];
   int ret = identify(buf);
-  // int ret = 1;
   printf("identify: %d\n", ret);
   if (ret == IDENTIFY_ATA) {
     printf("Supports LBA48: %d\n", lba48_support(buf));
