@@ -158,7 +158,8 @@ int vm_map(uint32_t vaddr_start, uint32_t len) {
  - if old is not NULL: store previous page table entries in old
  - if new is not NULL: use entries stored in new instead of creating new ones
  **/
-int vm_map_ext(uint32_t vaddr, uint32_t len, uint32_t *old, uint32_t *new) {
+int vm_map_ext(uint32_t vaddr, uint32_t len, uint32_t *old, uint32_t *new,
+               bool writable, bool user) {
   uint32_t pd_i = __vaddr_get_pdei(vaddr), pt_i = __vaddr_get_ptei(vaddr);
   uint32_t pte_buf_i = 0;
   uint32_t *pt = &page_dir[pd_i];
@@ -169,7 +170,7 @@ int vm_map_ext(uint32_t vaddr, uint32_t len, uint32_t *old, uint32_t *new) {
       pt = alloc_pt();
       if (!pt)
         return 2; // ran out of pt_space
-      fill_pde((pde_t *)&page_dir[pd_i], (uint32_t)pt, true, false);
+      fill_pde((pde_t *)&page_dir[pd_i], (uint32_t)pt, writable, user);
       printf("vm_map: %p == %p? \n", (uint32_t)pt, page_dir[pd_i]);
     }
     while (len > 0 && pt_i < 1024) {
@@ -179,7 +180,7 @@ int vm_map_ext(uint32_t vaddr, uint32_t len, uint32_t *old, uint32_t *new) {
       if (!new) {
         uint32_t paddr = (uint32_t)phys_alloc(1);
         KASSERT(paddr);
-        fill_pte((pte_t *)&pt[pt_i++], paddr, true, false, false);
+        fill_pte((pte_t *)&pt[pt_i++], paddr, writable, user, false);
       } else
         pt[pt_i] = new[pte_buf_i];
       pte_buf_i++;
