@@ -17,6 +17,7 @@ static uint64_t GDT[6];
 static uint8_t GDTR[6];
 
 int main() {
+  init_serial();
   // setup GDTR
   uint32_t gdt_addr = (uint32_t)GDT;
   for (int i = 0; i < 4; i++) {
@@ -45,10 +46,9 @@ int main() {
       "ltr ax\n\t" ::"g"(GDT),
       "m"(GDTR));
 
-  init_serial();
   PIC_remap(0x20, 0x28);
   idt_init();
-  setup_vm();
+  setup_vm(); // TODO: need to setup an address space for usermode
 
   // jump_usermode();
 
@@ -60,18 +60,31 @@ int main() {
     printf("Number of addressable LBA sectors: %p\n", get_lba_cnt(buf));
     init_fs();
     printf("Made it out alive!");
+
+    fildes_t hello_fd = open_ext2("hello", 0); // perms are not implemented yet
+    if (fildes_t_cmp(&hello_fd, &NULL_FD)) {
+      printf("open failed!\n");
+      return 0;
+    }
+    char file_content[64];
+    memset(&file_content, 0, 64);
+    KASSERT(read(&hello_fd, 32, file_content) == 32);
+    printf("%s\n", file_content);
+    close_ext2(&hello_fd);
+
+    fildes_t test_fd = open_ext2("test", 0);
+    if (fildes_t_cmp(&hello_fd, &NULL_FD)) {
+      printf("open failed!\n");
+      return 0;
+    }
+    KASSERT(read(&test_fd, 6, file_content) == 6);
+    printf("File contents:");
+    for (int i = 0; i < 6; i++) {
+      printf("%p ", file_content[i]);
+    }
   }
 
-  fildes_t hello_fd = open_ext2("hello", 0); // perms are not implemented yet
-  if (fildes_t_cmp(&hello_fd, &NULL_FD)) {
-    printf("open failed!\n");
-    return 0;
-  }
-  char file_content[64];
-  memset(&file_content, 0, 64);
-  KASSERT(read(&hello_fd, 32, file_content) == 32);
-  printf("%s\n", file_content);
-  close_ext2(&hello_fd);
+  // load_usermode_prog(&test_fd);
 
   // enable_cursor(0, 15);
   // *((int *)0xb8000) = 0x07690748;
