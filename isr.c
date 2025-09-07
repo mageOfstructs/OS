@@ -1,6 +1,7 @@
+#include "ata.h"
 #include "pic.h"
 #include "printf.h"
-#include "ata.h"
+#include "syscall.h"
 #include <stdint.h>
 
 typedef struct int_frame {
@@ -9,7 +10,8 @@ typedef struct int_frame {
   uint32_t eflags;
 } __attribute__((packed)) int_frame_t;
 
-// __attribute__((noreturn)) void exception_handler(uint16_t inum, int_frame_t f);
+// __attribute__((noreturn)) void exception_handler(uint16_t inum, int_frame_t
+// f);
 __attribute__((noreturn)) void
 exception_handler_errcode(uint8_t inum, uint32_t errcode, int_frame_t f);
 
@@ -44,12 +46,14 @@ void keyboard_test(void) {
   PIC_sendEOI(1);
 }
 
+void syscall(uint8_t snum) { sys_test(); }
+
 void timer(void) {
   // printf("t");
   PIC_sendEOI(0);
 }
 
 void ata(void) {
-  printf("ATA IRQ\n");
+  // printf("ATA IRQ\n");
   PIC_sendEOI(14);
 }

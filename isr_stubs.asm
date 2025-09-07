@@ -69,8 +69,10 @@ isr_stub_table:
 isr_wrapper ata
 
 global isr_test
+extern syscall
 isr_test:
-    mov byte [0xb8000], 'Q'
+    push byte 0
+    call syscall
     iret
 
 global isr_keyboard
