@@ -42,6 +42,9 @@ int read_ext2(fildes_t *fildes, uint32_t n, void *ret) {
       set_bit((uint8_t *)&data->bitmap, blocki);
       read_block_addr(data->inode->dptrs[blocki],
                       (uint16_t *)&data->buf[blocki * FS_GLOBAL_CTX.block_sz]);
+      printf("Block %d: ", data->inode->dptrs[blocki]);
+      dump_block(&data->buf[blocki * FS_GLOBAL_CTX.block_sz]);
+      printf("\n");
     }
     cur_cursor += FS_GLOBAL_CTX.block_sz;
   }
