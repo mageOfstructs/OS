@@ -6,7 +6,7 @@ tmp=$(SRCFILES:%.c=out/%.o)
 OUTFILES=$(tmp:%.asm=out/%.o)
 
 qemu: OS.bin
-	qemu-system-x86_64 -drive format=raw,file="$<",index=0,if=floppy -m 128M
+	qemu-system-x86_64 -drive format=raw,file="$<",index=0,if=floppy -m 128M -chardev file,id=klog,path=./kernel.log -serial chardev:klog -drive file=./testdisk.img,format=raw,index=0
 
 out/%.o: %.c
 	i386-elf-gcc $(GCCFLAGS) -c $< -o $@
