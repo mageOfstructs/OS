@@ -1,6 +1,8 @@
 #ifndef USERMODE_H
 #define USERMODE_H
 
+#include "fildes.h"
+#include "vm.h"
 #include <stdint.h>
 
 typedef struct gdte {
@@ -45,5 +47,7 @@ typedef struct tss {
 
 void setup_tss(gdte_t *gdt);
 extern void jump_usermode();
+extern void jump_usermode_fr(void (*f)());
+void load_usermode_prog(fildes_t *fd);
 
 #endif // !USERMODE_H
