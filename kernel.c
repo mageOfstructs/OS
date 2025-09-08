@@ -61,30 +61,34 @@ int main() {
     init_fs();
     printf("Made it out alive!");
 
+    char file_content[64];
+    memset(&file_content, 0, 64);
+
     fildes_t hello_fd = open_ext2("hello", 0); // perms are not implemented yet
     if (fildes_t_cmp(&hello_fd, &NULL_FD)) {
       printf("open failed!\n");
       return 0;
     }
-    char file_content[64];
-    memset(&file_content, 0, 64);
     KASSERT(read(&hello_fd, 32, file_content) == 32);
-    printf("%s\n", file_content);
+    for (int i = 0; i < 6; i++) {
+      printf("%p ", file_content[i]);
+    }
+    printf("\n%s\nend", file_content);
     close_ext2(&hello_fd);
 
     fildes_t test_fd = open_ext2("test", 0);
-    if (fildes_t_cmp(&hello_fd, &NULL_FD)) {
+    load_usermode_prog(&test_fd);
+    if (test_fd.type == NULL_TYPE || fildes_t_cmp(&test_fd, &NULL_FD)) {
       printf("open failed!\n");
       return 0;
     }
     KASSERT(read(&test_fd, 6, file_content) == 6);
+    printf("\nRet Addr here: %p", file_content);
     printf("File contents:");
-    for (int i = 0; i < 6; i++) {
-      printf("%p ", file_content[i]);
+    for (int i = 0; i < 64; i++) {
+      printf("%p ", (uint8_t)file_content[i]);
     }
   }
-
-  // load_usermode_prog(&test_fd);
 
   // enable_cursor(0, 15);
   // *((int *)0xb8000) = 0x07690748;
