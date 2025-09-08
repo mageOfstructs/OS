@@ -165,6 +165,9 @@ int vm_map_ext(uint32_t vaddr, uint32_t len, uint32_t *old, uint32_t *new,
   uint32_t *pt = &page_dir[pd_i];
   while (len > 0) {
     if (is_pde_present(pd_i)) {
+      if ((page_dir[pd_i] & 0x06) ^ 0x06) {
+        page_dir[pd_i] |= (writable << 1) | (user << 2);
+      }
       pt = (uint32_t *)(page_dir[pd_i] & ~0xFFF);
     } else {
       pt = alloc_pt();
