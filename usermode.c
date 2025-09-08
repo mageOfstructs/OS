@@ -1,5 +1,6 @@
 #include "usermode.h"
 #include "fildes.h"
+#include "math.h"
 #include "printf.h"
 #include "utils.h"
 #include "vm.h"
@@ -26,8 +27,15 @@ void setup_tss(gdte_t *gdt) {
 }
 
 void load_usermode_prog(fildes_t *fd) {
-  const uint32_t usermode_start = 0x00A00000;
-  KASSERT(vm_map_ext(usermode_start, 1, NULL, NULL, true, true) == 0);
+  uint32_t usermode_start = DEF_USERPROG_START,
+           usercode_pages = ceild(fd->sz, PG_SIZE);
+  printf("program size: %d\n", fd->sz);
+  KASSERT(vm_map_ext(usermode_start, usercode_pages, NULL, NULL, false, true) ==
+          0);
+  usermode_start += usercode_pages * PG_SIZE;
+  KASSERT(vm_map_ext(usermode_start, USER_STACK_PAGES, NULL, NULL, true,
+                     true) == 0);
+
   KASSERT(read(fd, fd->sz, (void *)usermode_start) == fd->sz);
   jump_usermode_fr((void (*)())usermode_start, 0xA00FFF);
 }
