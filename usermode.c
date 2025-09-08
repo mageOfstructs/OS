@@ -37,5 +37,6 @@ void load_usermode_prog(fildes_t *fd) {
                      true) == 0);
 
   KASSERT(read(fd, fd->sz, (void *)usermode_start) == fd->sz);
-  jump_usermode_fr((void (*)())usermode_start, 0xA00FFF);
+  jump_usermode((void (*)())usermode_start,
+                usermode_start + USER_STACK_PAGES * PG_SIZE - 1);
 }

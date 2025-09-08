@@ -1,6 +1,6 @@
 GCCFLAGS=-ffreestanding -m32 -g -c -masm=intel
 NASMFLAGS=-f elf
-SRCFILES=$(shell ls *.{asm,c} fs/*.c | grep -P "[^(boot|zeroes|kernel_entry.asm)]")
+SRCFILES=$(shell ls *.{asm,c} fs/*.c | grep -P "^(?!(boot|zeroes|kernel_entry)\.asm|test_usermode\.c).*$$")
 
 tmp=$(SRCFILES:%.c=out/%.o)
 OUTFILES=$(tmp:%.asm=out/%.o)

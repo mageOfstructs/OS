@@ -5,6 +5,9 @@
 #include "vm.h"
 #include <stdint.h>
 
+#define USER_STACK_PAGES 4
+#define DEF_USERPROG_START 0x00A00000
+
 typedef struct gdte {
   uint16_t llimit;
   uint16_t lbase;
@@ -46,8 +49,7 @@ typedef struct tss {
 } __attribute__((packed)) tss_t;
 
 void setup_tss(gdte_t *gdt);
-extern void jump_usermode();
-extern void jump_usermode_fr(void (*f)(), uint32_t esp);
+extern void jump_usermode(void (*f)(), uint32_t esp);
 void load_usermode_prog(fildes_t *fd);
 
 #endif // !USERMODE_H

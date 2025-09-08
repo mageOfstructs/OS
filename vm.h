@@ -25,6 +25,8 @@ typedef struct pde {
 #define BLANK_PDE 0x00000002
 #define BLANK_PTE BLANK_PDE
 
+#define PG_SIZE 4096
+
 /*
  * flags:
  * Present
