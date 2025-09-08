@@ -17,7 +17,7 @@ int strcmp(char *s1, char *s2) {
 
 uint32_t strlen(char *s1) {
   uint32_t ret = 0;
-  while (*s1)
+  while (*s1++)
     ret++;
   return ret;
 }

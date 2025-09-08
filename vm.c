@@ -18,6 +18,17 @@ static uint8_t free_pts_bitmap[128] = {
     255, [127] = 0b00111111}; // we already have two page tables, so there's no
                               // need for allocating that space again here
 
+static inline uint32_t __vaddr_get_pdei(uint32_t vaddr) {
+  return (vaddr >> 22);
+}
+static inline uint32_t __vaddr_get_ptei(uint32_t vaddr) {
+  return (vaddr >> 12 & 0x3FF);
+}
+static inline uint32_t __vaddr_get_poff(uint32_t vaddr) {
+  return (vaddr & 0x3FF);
+}
+static inline bool __entry_present(uint32_t entry) { return entry & 1; }
+
 void fill_pde(pde_t *p, uint32_t addr, bool write_allowed,
               bool available_to_userspace) {
   p->flags = 1; // we'll do swap later
@@ -27,6 +38,7 @@ void fill_pde(pde_t *p, uint32_t addr, bool write_allowed,
     p->flags |= 4;
   p->avladdr = (uint8_t)(addr >> 8);
   p->haddr = (uint16_t)(addr >> 16);
+  printf("fill_pde: %p", *p);
 }
 
 void fill_pte(pte_t *p, uint32_t addr, bool write_allowed,
@@ -38,7 +50,7 @@ void fill_pte(pte_t *p, uint32_t addr, bool write_allowed,
     p->flags |= 4;
   p->g = global & 1; // make sure we don't overflow the bit field
   p->avl = 0;
-  printf("fill_pte physaddr: %p %p;", p, addr);
+  printf("fill_pte physaddr: %p %p;", *p, addr);
   p->laddr = (uint8_t)(addr >> 12) & 0x0F;
   p->haddr = (uint16_t)(addr >> 16);
 }
@@ -49,6 +61,7 @@ void *get_physaddr(void *virtualaddr) {
 
   unsigned long *pd = page_dir;
 
+  printf("PDE: %p\n", pd[pdindex]);
   unsigned long *pt = (uint32_t *)(pd[pdindex] & ~0xFFF);
   printf("pd_i: %d, pt_i: %d PT: %p ", pdindex, ptindex, pt);
 
@@ -66,6 +79,17 @@ static inline bool is_pte_present(uint32_t *pt, uint32_t i) {
 }
 
 static inline uint32_t get_addr(uint32_t entry) { return entry & ~0xFFF; }
+
+pte_t *get_pte(uint32_t vaddr) {
+  uint32_t pde_i = (vaddr >> 22) & 0x3FF;
+  uint32_t pte_i = (vaddr >> 12) & 0x3FF;
+  if (!is_pde_present(pde_i))
+    return NULL;
+  uint32_t *pt = &page_dir[pde_i];
+  if (!is_pte_present(pt, pte_i))
+    return NULL;
+  return (pte_t *)&pt[pte_i];
+}
 
 uint32_t *alloc_pt() {
   for (int i = 0; i < 1024; i++) {
@@ -87,7 +111,7 @@ int free_pt(uint32_t *pt) {
     free_pts_bitmap[i / 8] &= ~(1 << (i % 8));
     return 0; // success
   } else
-    return -2; // trying to free a deallocated page
+    return -2; // trying to free a deallocated page table
 }
 
 /**
@@ -128,6 +152,61 @@ int vm_map(uint32_t vaddr_start, uint32_t len) {
     pt_i = 0;
   }
   return 0; // success
+}
+
+/**
+ * map a virtual memory region extended, works the same as vm_map with these
+ *additions:
+ - if old is not NULL: store previous page table entries in old
+ - if new is not NULL: use entries stored in new instead of creating new ones
+ **/
+int vm_map_ext(uint32_t vaddr, uint32_t len, uint32_t *old, uint32_t *new,
+               bool writable, bool user) {
+  uint32_t pd_i = __vaddr_get_pdei(vaddr), pt_i = __vaddr_get_ptei(vaddr);
+  uint32_t pte_buf_i = 0;
+  uint32_t *pt = &page_dir[pd_i];
+  while (len > 0) {
+    if (is_pde_present(pd_i)) {
+      if ((page_dir[pd_i] & 0x06) ^ 0x06) {
+        page_dir[pd_i] |= (writable << 1) | (user << 2);
+      }
+      pt = (uint32_t *)(page_dir[pd_i] & ~0xFFF);
+    } else {
+      pt = alloc_pt();
+      if (!pt)
+        return 2; // ran out of pt_space
+      fill_pde((pde_t *)&page_dir[pd_i], (uint32_t)pt, writable, user);
+      printf("vm_map: %p == %p? \n", (uint32_t)pt, page_dir[pd_i]);
+    }
+    while (len > 0 && pt_i < 1024) {
+      if (old)
+        old[pte_buf_i] = pt[pt_i];
+
+      if (!new) {
+        uint32_t paddr = (uint32_t)phys_alloc(1);
+        KASSERT(paddr);
+        fill_pte((pte_t *)&pt[pt_i++], paddr, writable, user, false);
+      } else
+        pt[pt_i] = new[pte_buf_i];
+      pte_buf_i++;
+      len--;
+    }
+    pd_i++;
+    pt_i = 0;
+  }
+  return 0;
+}
+
+int vm_chk_map(uint32_t vaddr) {
+  uint32_t pt_i = __vaddr_get_ptei(vaddr);
+  pte_t *pte = get_pte(vaddr);
+  if (!pte)
+    return -1;
+  uint32_t ret = 0;
+  while ((pt_i + ret) < 1024 && pte[pt_i + ret].flags & 1) {
+    ret++;
+  }
+  return ret;
 }
 
 static inline void __native_flush_tlb_single(unsigned long addr) {

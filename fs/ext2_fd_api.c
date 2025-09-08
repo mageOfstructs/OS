@@ -1,5 +1,7 @@
 #include "../fildes.h"
+#include "../printf.h"
 #include "ext2.h"
+#include <stdint.h>
 
 extern fs_ext2_ctx_t FS_GLOBAL_CTX;
 
@@ -21,16 +23,18 @@ fildes_t open_ext2(char *path, uint8_t perms) {
 
 int read_ext2(fildes_t *fildes, uint32_t n, void *ret) {
   fildes_data_ext2_t *data = &fildes->data.ext2_data;
+  // calculate the total number of blocks we will need
   uint32_t needed_bufsz = ceild(fildes->cursor + n, FS_GLOBAL_CTX.block_sz);
+  printf("read_ext2 start\n");
   if (!data->buf) {
     data->buf_sz = needed_bufsz;
     data->buf = kalloc(needed_bufsz * FS_GLOBAL_CTX.block_sz);
-  } else if (data->buf_sz < ceild(n, FS_GLOBAL_CTX.block_sz)) {
-    data->buf =
-        krealloc(data->buf, data->buf_sz,
-                 ceild(n, FS_GLOBAL_CTX.block_sz) * FS_GLOBAL_CTX.block_sz);
-    data->buf_sz = ceild(n, FS_GLOBAL_CTX.block_sz);
+  } else if (data->buf_sz < needed_bufsz) {
+    data->buf = krealloc(data->buf, data->buf_sz * FS_GLOBAL_CTX.block_sz,
+                         needed_bufsz * FS_GLOBAL_CTX.block_sz);
+    data->buf_sz = needed_bufsz;
   }
+  KASSERT(data->buf);
 
   uint32_t cur_cursor = fildes->cursor;
   uint32_t blocki;
@@ -47,7 +51,7 @@ int read_ext2(fildes_t *fildes, uint32_t n, void *ret) {
   int memcpy_ret = memcpy(&data->buf[fildes->cursor / FS_GLOBAL_CTX.block_sz] +
                               fildes->cursor % FS_GLOBAL_CTX.block_sz,
                           ret, n);
-  if (memcpy_ret != -1)
+  if (memcpy_ret > -1)
     fildes->cursor += n;
   return memcpy_ret;
 }

@@ -15,7 +15,7 @@ void dump_block(void *b) {
 
 static inline bool is_ext2_fs(superblock_t *sp) { return sp->sig == EXT2_SIG; }
 
-static inline bool is_dir(inode_t *i) {
+static inline bool is_dir(const inode_t *i) {
   return i->typeperm & 0x4000 ? true : false;
 }
 
@@ -27,7 +27,6 @@ int is_fs_not_ok(superblock_t *sp) {
   if (sp->fs_state == 2 && sp->err_handling_method != 1)
     return 1;
   if (sp->major_version >= 1) {
-    printf("%p", sp->required_features);
     if (sp->required_features & FEAT_REQ_COMP)
       return 2;
     if (sp->required_features & FEAT_REQ_NEEDS_JOURNAL_REPLAY)
@@ -89,21 +88,15 @@ void __read_inode(fs_ext2_ctx_t *ctx, uint32_t inode_addr, inode_t *ret) {
   printf("Inode Table Adjusted: %d\n", ctx->bgdt[block_group].inode_table_addr +
                                            (inode_start / ctx->block_sz));
   printf("Inode Size: %d\n", ctx->inode_sz);
-  printf("inode_start: %d", inode_start);
-  printf("inode_start adjusted: %d", inode_start % ctx->block_sz);
+  printf("inode_start: %d\n", inode_start);
+  printf("inode_start adjusted: %d\n", inode_start % ctx->block_sz);
   KASSERT(__read_block(ctx, block_group,
                        ctx->bgdt[block_group].inode_table_addr +
                            (inode_start / ctx->block_sz),
                        inode_buf) == 0);
-  if (inode_addr == 12) {
-    for (int i = 0; i < FS_GLOBAL_CTX.block_sz; i++) {
-      if (inode_buf[i])
-        printf("%d %p ", i, inode_buf[i]);
-    }
-  }
-
   memcpy(&inode_buf[(inode_start % ctx->block_sz) / 2], ret, sizeof(inode_t));
   kfree(inode_buf, ctx->block_sz);
+  printf("read_inode_end!\n");
 }
 
 void read_inode(uint32_t inode_addr, inode_t *ret) {
@@ -139,7 +132,7 @@ void dbg_inode_dir(fs_ext2_ctx_t *ctx, inode_t *i) {
   kfree(dir_entry_buf, ctx->block_sz);
 }
 
-int __get_inode_from_dir(fs_ext2_ctx_t *ctx, inode_t *dir, char *name,
+int __get_inode_from_dir(fs_ext2_ctx_t *ctx, const inode_t *dir, char *name,
                          uint32_t name_length, uint32_t *ret) {
   if (!is_dir(dir))
     return -1;
@@ -183,13 +176,15 @@ int get_inode_from_dir(inode_t *dir, char *name, uint32_t name_length,
   return __get_inode_from_dir(&FS_GLOBAL_CTX, dir, name, name_length, ret);
 }
 
-int __traverse(fs_ext2_ctx_t *ctx, char *path, inode_t *start_dir,
+int __traverse(fs_ext2_ctx_t *ctx, char *path, const inode_t *start_dir,
                inode_t *ret) {
+  printf("traverse start_dir type: %p\n", start_dir->typeperm);
   uint32_t i = 0;
   char *cur_name_start = path;
   uint8_t backslash = 0;
 
-  inode_t *cur_inode = start_dir;
+  inode_t *cur_inode = ret;
+  memcpy(start_dir, cur_inode, sizeof(inode_t));
   uint32_t cur_inode_num;
 
   while (path[i]) {
@@ -206,20 +201,31 @@ int __traverse(fs_ext2_ctx_t *ctx, char *path, inode_t *start_dir,
         if (__get_inode_from_dir(ctx, cur_inode, cur_name_start,
                                  i - (uint32_t)cur_name_start + (uint32_t)path -
                                      1,
-                                 &cur_inode_num)) {
+                                 &cur_inode_num))
           return 1;
         __read_inode(ctx, cur_inode_num, cur_inode);
         cur_name_start = path + i;
       }
     }
+    printf("%c", path[i]);
     i++;
   }
+  printf("\ntraverse loop end\n");
 
+  if (cur_name_start == path) {
+    printf("%p\n", start_dir->typeperm);
+    if (__get_inode_from_dir(ctx, start_dir, path, strlen(path),
+                             &cur_inode_num))
+      return 2;
+    read_inode(cur_inode_num, cur_inode);
+  }
+
+  printf("found inode %d!\n", cur_inode_num);
   *ret = *cur_inode;
   return 0;
 }
 
-int traverse(char *path, inode_t *start_dir, inode_t *ret) {
+int traverse(char *path, const inode_t *start_dir, inode_t *ret) {
   return __traverse(&FS_GLOBAL_CTX, path, start_dir, ret);
 }
 
@@ -290,7 +296,9 @@ void init_fs() {
   // for (int i = inode_sz*1; i < sizeof(inode_t) + 0x80; i++)
   //   printf("%p ", inode_buf[i]);
 
+  FS_GLOBAL_CTX.root = kalloc(sizeof(inode_t));
   read_inode(2, FS_GLOBAL_CTX.root); // 2 is the inode of the root directory
+  return;
 
   dbg_inode_dir(&FS_GLOBAL_CTX, FS_GLOBAL_CTX.root);
   uint32_t hello_inum;

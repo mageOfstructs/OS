@@ -6,61 +6,89 @@
 #include "pic.h"
 #include "printf.h"
 #include "serial.h"
+#include "usermode.h"
 #include "utils.h"
 #include "vm.h"
 #include <stdint.h>
 
 STRUCT_EQ(fildes_t);
 
-static uint64_t GDT[3];
+static uint64_t GDT[6];
 static uint8_t GDTR[6];
 
 int main() {
-  // relocate the GDT as setup_vm would otherwise overwrite it with a page table
-  // NOTE: This is not a permanent solution! It could be that the kernel grows
-  // so big it's code would overlap with the bootsector and overwrite it when it
-  // is loaded into memory.
+  init_serial();
+  // setup GDTR
   uint32_t gdt_addr = (uint32_t)GDT;
   for (int i = 0; i < 4; i++) {
     GDTR[i + 2] = (gdt_addr >> i * 8) & 0xFF;
   }
-  asm("mov ecx, 8*3\n\t"
+  *((uint16_t *)GDTR) = 48; // six GDT entries
+  printf("%p %d\n", GDTR, *((uint16_t *)GDTR));
+
+  setup_tss((gdte_t *)&GDT[5]);
+  printf("%p %d\n", GDTR, *((uint16_t *)GDTR));
+
+  // relocate the GDT as setup_vm would otherwise overwrite it with a page table
+  // NOTE: This is not a permanent solution! It could be that the kernel grows
+  // so big it's code would overlap with the bootsector and overwrite it when it
+  // is loaded into memory.
+  asm("mov ecx, 8*5\n\t"
       "mov esi, 0x7c42\n\t"
       "mov edi, %0\n\t"
       "rep; movsb\n\t"
-      "mov ecx, 2\n\t"
-      "mov esi, 0x7c5a\n\t"
-      "mov edi, %1\n\t"
-      "rep; movsb\n\t"
-      "lgdt %2" ::"g"(GDT),
-      "g"(GDTR), "m"(GDTR));
-  // printf("GDTR size: %d", (GDTR[0] << 8) | GDTR[1]);
-  init_serial();
+      // "mov ecx, 2\n\t"
+      // "mov esi, 0x7c5a\n\t"
+      // "mov edi, %1\n\t"
+      // "rep; movsb\n\t"
+      "lgdt %1\n\t"
+      "mov ax, 0x28\n\t" // load TSS
+      "ltr ax\n\t" ::"g"(GDT),
+      "m"(GDTR));
+
   PIC_remap(0x20, 0x28);
   idt_init();
-  setup_vm();
+  setup_vm(); // TODO: need to setup an address space for usermode
+
+  // jump_usermode();
 
   uint16_t buf[256];
   int ret = identify(buf);
-  // int ret = 1;
   printf("identify: %d\n", ret);
   if (ret == IDENTIFY_ATA) {
     printf("Supports LBA48: %d\n", lba48_support(buf));
     printf("Number of addressable LBA sectors: %p\n", get_lba_cnt(buf));
     init_fs();
     printf("Made it out alive!");
-  }
 
-  fildes_t hello_fd = open_ext2("hello", 0); // perms are not implemented yet
-  if (fildes_t_cmp(&hello_fd, &NULL_FD)) {
-    printf("open failed!\n");
-    return 0;
+    char file_content[64];
+    memset(&file_content, 0, 64);
+
+    fildes_t hello_fd = open_ext2("hello", 0); // perms are not implemented yet
+    if (fildes_t_cmp(&hello_fd, &NULL_FD)) {
+      printf("open failed!\n");
+      return 0;
+    }
+    KASSERT(read(&hello_fd, 32, file_content) == 32);
+    for (int i = 0; i < 6; i++) {
+      printf("%p ", file_content[i]);
+    }
+    printf("\n%s\nend", file_content);
+    close_ext2(&hello_fd);
+
+    fildes_t test_fd = open_ext2("test", 0);
+    load_usermode_prog(&test_fd);
+    if (test_fd.type == NULL_TYPE || fildes_t_cmp(&test_fd, &NULL_FD)) {
+      printf("open failed!\n");
+      return 0;
+    }
+    KASSERT(read(&test_fd, 6, file_content) == 6);
+    printf("\nRet Addr here: %p", file_content);
+    printf("File contents:");
+    for (int i = 0; i < 64; i++) {
+      printf("%p ", (uint8_t)file_content[i]);
+    }
   }
-  char file_content[64];
-  memset(&file_content, 0, 64);
-  KASSERT(read(&hello_fd, 32, file_content) == 32);
-  printf("%s\n", file_content);
-  close_ext2(&hello_fd);
 
   // enable_cursor(0, 15);
   // *((int *)0xb8000) = 0x07690748;
