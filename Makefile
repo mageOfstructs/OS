@@ -33,7 +33,6 @@ OS.bin: everything.bin zeroes.bin
 
 testdisk.img: out/test_usermode.o
 	yes | mkfs.ext2 ./testdisk.img
-	mkdir -p tmp
 	sudo mount ./testdisk.img tmp
 	echo "Hello World" | sudo tee tmp/hello
 	i386-elf-ld -o out/test -Ttext 0xA00000 out/test_usermode.o --oformat binary
