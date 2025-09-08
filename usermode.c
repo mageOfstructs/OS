@@ -29,9 +29,5 @@ void load_usermode_prog(fildes_t *fd) {
   const uint32_t usermode_start = 0x00A00000;
   KASSERT(vm_map_ext(usermode_start, 1, NULL, NULL, true, true) == 0);
   KASSERT(read(fd, fd->sz, (void *)usermode_start) == fd->sz);
-  for (int i = 0; i < 16; i++) {
-    printf("%p ", *((char *)(0x00A00000 + i)));
-  }
-  printf("\n");
-  jump_usermode_fr((void (*)())usermode_start);
+  jump_usermode_fr((void (*)())usermode_start, 0xA00FFF);
 }
