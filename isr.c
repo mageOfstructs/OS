@@ -29,6 +29,8 @@ void exception_handler_errcode(uint8_t inum, uint32_t errcode, int_frame_t f) {
   printf("EIP: %p; CS: %p; EFLAGS: %p\n", f.eip, f.cs, f.eflags);
   printf("ERROR CODE: %p!\n", errcode);
   __asm__ volatile("cli; hlt; jmp $"); // Completely hangs the computer
+  for (;;)
+    ;
 }
 
 void page_flt(uint32_t vaddr, uint32_t errcode, int_frame_t f) {

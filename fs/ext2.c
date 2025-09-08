@@ -15,7 +15,7 @@ void dump_block(void *b) {
 
 static inline bool is_ext2_fs(superblock_t *sp) { return sp->sig == EXT2_SIG; }
 
-static inline bool is_dir(inode_t *i) {
+static inline bool is_dir(const inode_t *i) {
   return i->typeperm & 0x4000 ? true : false;
 }
 
@@ -132,7 +132,7 @@ void dbg_inode_dir(fs_ext2_ctx_t *ctx, inode_t *i) {
   kfree(dir_entry_buf, ctx->block_sz);
 }
 
-int __get_inode_from_dir(fs_ext2_ctx_t *ctx, inode_t *dir, char *name,
+int __get_inode_from_dir(fs_ext2_ctx_t *ctx, const inode_t *dir, char *name,
                          uint32_t name_length, uint32_t *ret) {
   if (!is_dir(dir))
     return -1;
