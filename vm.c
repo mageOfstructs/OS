@@ -38,6 +38,7 @@ void fill_pde(pde_t *p, uint32_t addr, bool write_allowed,
     p->flags |= 4;
   p->avladdr = (uint8_t)(addr >> 8);
   p->haddr = (uint16_t)(addr >> 16);
+  printf("fill_pde: %p", *p);
 }
 
 void fill_pte(pte_t *p, uint32_t addr, bool write_allowed,
@@ -49,7 +50,7 @@ void fill_pte(pte_t *p, uint32_t addr, bool write_allowed,
     p->flags |= 4;
   p->g = global & 1; // make sure we don't overflow the bit field
   p->avl = 0;
-  printf("fill_pte physaddr: %p %p;", p, addr);
+  printf("fill_pte physaddr: %p %p;", *p, addr);
   p->laddr = (uint8_t)(addr >> 12) & 0x0F;
   p->haddr = (uint16_t)(addr >> 16);
 }
@@ -60,6 +61,7 @@ void *get_physaddr(void *virtualaddr) {
 
   unsigned long *pd = page_dir;
 
+  printf("PDE: %p\n", pd[pdindex]);
   unsigned long *pt = (uint32_t *)(pd[pdindex] & ~0xFFF);
   printf("pd_i: %d, pt_i: %d PT: %p ", pdindex, ptindex, pt);
 
