@@ -1,0 +1,8 @@
+Diagnostics:
+  Suppress: -Wformat
+
+CompileFlags:
+  Remove: [-I*]
+
+Completion:
+  HeaderInsertion: Never
