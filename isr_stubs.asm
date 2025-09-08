@@ -71,7 +71,6 @@ isr_wrapper ata
 global isr_test
 extern syscall
 isr_test:
-    push byte 0
     call syscall
     iret
 
