@@ -5,7 +5,7 @@
 
 volatile static u16 *last_cursor_pos = VMEM_START;
 
-void put_char(char c, volatile u16 **cursor) { 
+void put_char(char c, volatile u16 **cursor) {
   switch (c) {
   case '\n':
     *cursor += VGA_WIDTH - (*cursor - VMEM_START) % VGA_WIDTH;
@@ -14,10 +14,10 @@ void put_char(char c, volatile u16 **cursor) {
     *cursor -= (*cursor - VMEM_START) % VGA_WIDTH;
     break;
   default:
-    **cursor = ((u16)c) | VMEM_COL_WHITE; 
+    **cursor = ((u16)c) | VMEM_COL_WHITE;
     (*cursor)++;
   }
-  serial_putc(c); 
+  serial_putc(c);
 }
 
 uint write_str(const char *str, volatile u16 **off) {
@@ -70,7 +70,9 @@ uint write_uint(long num, u32 base, volatile u16 **off) {
   return write_int(num, base, off);
 }
 
-uint write_int10(long num, volatile u16 **off) { return write_int(num, 10, off); }
+uint write_int10(long num, volatile u16 **off) {
+  return write_int(num, 10, off);
+}
 
 uint write_ptr(ptr_t ptr, volatile u16 **off) {
   put_char('0', off);
@@ -114,12 +116,10 @@ char handle_stage1(volatile u16 **cursor, va_list *args, char format_char) {
              // padding, floats, etc.)
 }
 
-int printf(const char *format, ...) {
+int vaprintf(const char *format, va_list args) {
   if (!last_cursor_pos) { // I have no idea why this is, compilers are stupid
     last_cursor_pos = VMEM_START;
   }
-  va_list args;
-  va_start(args, format);
 
   volatile unsigned short *cursor = last_cursor_pos;
 
@@ -141,7 +141,6 @@ int printf(const char *format, ...) {
   loopend:
     i++;
   }
-  va_end(args);
   last_cursor_pos = cursor;
   if (cursor > LAST_CHAR_ON_SCREEN) { // scroll one line up if we hit the bottom
     unsigned int last_dst = VMEM_START_CONST;
@@ -161,4 +160,11 @@ int printf(const char *format, ...) {
     last_cursor_pos = VMEM_START + (VGA_LINES - 1) * VGA_WIDTH;
   }
   return 0;
+}
+
+int printf(const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  int ret = vaprintf(format, args);
+  va_end(args);
 }
