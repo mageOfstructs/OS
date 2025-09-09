@@ -111,6 +111,7 @@
       n->next->prev = n->prev;                                                 \
     else                                                                       \
       l->tail = n->prev;                                                       \
+    l->sz--;                                                                   \
   }                                                                            \
   llist_node_##canon_name *llist_node_##canon_name##_offset(                   \
       llist_node_##canon_name *n, int off) {                                   \

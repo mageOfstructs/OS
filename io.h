@@ -3,4 +3,5 @@
 
 void outb(uint16_t dev, char val);
 uint8_t inb(uint16_t dev);
+uint16_t inw(uint16_t dev);
 void io_wait(void);

@@ -64,6 +64,22 @@ GDT_start:
         db 0b11001111
         db 0x0
 
+    GDT_code_usr:
+        dw 0xffff
+        dw 0x0
+        db 0x0
+        db 0b11111010
+        db 0b11001111
+        db 0x0
+
+    GDT_data_usr:
+        dw 0xffff
+        dw 0x0
+        db 0x0
+        db 0b11110010
+        db 0b11001111
+        db 0x0
+
 GDT_end:
 
 GDT_descriptor:
