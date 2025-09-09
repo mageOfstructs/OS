@@ -71,7 +71,9 @@ isr_wrapper ata
 global isr_test
 extern syscall
 isr_test:
+    push dword [esp+12]
     call syscall
+    pop eax
     iret
 
 global isr_keyboard

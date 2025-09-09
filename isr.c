@@ -48,7 +48,22 @@ void keyboard_test(void) {
   PIC_sendEOI(1);
 }
 
-void syscall(uint8_t snum) { sys_test(); }
+void syscall(void *ustack) {
+  uint32_t sysnum;
+  asm("mov %0, eax" : "=r"(sysnum) :);
+  printf("syscall got stack %p\n", ustack);
+  switch (sysnum) {
+  case SYS_WRITE:
+    sys_write(*((uint32_t *)ustack), *((void **)(ustack + 4)),
+              *((uint32_t *)(ustack + 8)));
+    break;
+  case SYS_HLT:
+    asm("hlt");
+    break;
+  default:
+    sys_test();
+  }
+}
 
 void timer(void) {
   // printf("t");
