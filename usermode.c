@@ -2,6 +2,7 @@
 #include "fildes.h"
 #include "math.h"
 #include "printf.h"
+#include "proc.h"
 #include "utils.h"
 #include "vm.h"
 #include <stdint.h>
@@ -36,7 +37,9 @@ void load_usermode_prog(fildes_t *fd) {
   KASSERT(vm_map_ext(usermode_start, USER_STACK_PAGES, NULL, NULL, true,
                      true) == 0);
 
-  KASSERT(read(fd, fd->sz, (void *)usermode_start) == fd->sz);
-  jump_usermode((void (*)())usermode_start,
+  KASSERT(read(fd, fd->sz, (void *)DEF_USERPROG_START) == fd->sz);
+  set_cur_proc(new_proc());
+  printf("User stack: %p", usermode_start + USER_STACK_PAGES * PG_SIZE - 1);
+  jump_usermode((void (*)())DEF_USERPROG_START,
                 usermode_start + USER_STACK_PAGES * PG_SIZE - 1);
 }
