@@ -16,9 +16,9 @@ int read(fildes_t *fildes, uint32_t n, void *ret) {
 }
 int write(fildes_t *fildes, uint32_t n, const void *src) {
   switch (fildes->type) {
-  case EXT2_FILE_TYPE:
-    return write_vio(fildes, n, src);
   case VIRT_STREAM_TYPE:
+    return write_vio(fildes, n, src);
+  case EXT2_FILE_TYPE:
   default:
     printf("write: Not implemented: %d!\n", fildes->type);
     return -1;
