@@ -1,8 +1,11 @@
 #ifndef FILDES_H
 #define FILDES_H
 
-#define VIRT_STREAM_TYPE 0
-#define EXT2_FILE_TYPE 1
+#define VIRT_STREAM_STDIN 0
+#define VIRT_STREAM_STDOUT 1
+#define VIRT_STREAM_STDERR 2
+
+#define EXT2_FILE_TYPE 3
 #define NULL_TYPE 255
 
 #define SEEK_SET -1
@@ -12,11 +15,9 @@
 #include "fs/ext2.h"
 #include <stdint.h>
 
-typedef struct vio_data {
-  uint8_t vio_type;
-} vio_data_t;
-
 typedef struct fildes_data_ext2 {
+  uint32_t cursor;
+  uint32_t sz;
   inode_t *inode;
   uint8_t *buf;
   uint32_t buf_sz; // in blocks
@@ -25,15 +26,12 @@ typedef struct fildes_data_ext2 {
 
 typedef union fildes_data {
   fildes_data_ext2_t ext2_data;
-  vio_data_t vio_data;
 } fildes_data_t;
 
 typedef struct fildes {
-  uint32_t cursor;
-  uint32_t sz;
   uint8_t type;
   uint8_t perms;
-  fildes_data_t data;
+  fildes_data_t *data;
 } fildes_t;
 
 extern const fildes_t NULL_FD;

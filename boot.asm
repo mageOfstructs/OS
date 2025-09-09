@@ -1,5 +1,5 @@
 [org 0x7c00]                        
-KERNEL_LOCATION equ 0x1000
+KERNEL_LOCATION equ 0x8000
 KERNEL_SIZE equ 0
                                     
 
@@ -9,7 +9,7 @@ mov [BOOT_DISK], dl
 xor ax, ax                          
 mov es, ax
 mov ds, ax
-mov bp, 0x8000
+mov bp, 0x7FFE
 mov sp, bp
 
 mov bx, KERNEL_LOCATION

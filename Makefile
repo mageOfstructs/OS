@@ -20,7 +20,7 @@ boot.bin: full_kernel.bin boot.asm
 	nasm "out/boot.asm" -f bin -o boot.bin
 
 full_kernel.bin: out/kernel_entry.o $(OUTFILES) # WRONG!! kernel_entry.o must be the first in this list!1
-	i386-elf-ld -o "full_kernel.bin" -Ttext 0x1000 $^ --oformat binary
+	i386-elf-ld -o "full_kernel.bin" -Ttext 0x8000 $^ --oformat binary
 
 everything.bin: boot.bin
 	cat "boot.bin" "full_kernel.bin" > "everything.bin"

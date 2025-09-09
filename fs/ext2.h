@@ -8,6 +8,7 @@
 #include "../mem.h"
 #include "../printf.h"
 #include "../utils.h"
+#include "../log.h"
 #include <stdbool.h>
 
 #define EXT2_SIG 0xef53

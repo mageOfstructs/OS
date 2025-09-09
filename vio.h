@@ -9,6 +9,7 @@
 #define STDERR 2
 
 int write_vio(fildes_t *fildes, uint32_t n, const void *src);
+int read_vio(fildes_t *fildes, uint32_t n, void *ret);
 void close_vio(fildes_t *fildes);
 fildes_t open_vio(uint32_t stream, uint8_t perms);
 

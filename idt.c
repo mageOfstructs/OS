@@ -70,7 +70,7 @@ void idt_init() {
   // first couple bytes of that procedure. That's why we have to use the
   // &-operator to refer to the label's *address*
   idt_set_descriptor(0x80, (uint32_t)&isr_test,
-                     INT_TYPE_R0 |
+                     TRAP_TYPE_R0 |
                          0x60); // one of the most fundamental misunderstandings
   idt_set_descriptor(0x20, (uint32_t)&isr_timer, INT_TYPE_R0);
   idt_set_descriptor(0x21, (uint32_t)&isr_keyboard, INT_TYPE_R0);

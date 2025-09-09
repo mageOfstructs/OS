@@ -40,10 +40,12 @@ void page_flt(uint32_t vaddr, uint32_t errcode, int_frame_t f) {
   __asm__ volatile("cli; hlt; jmp $"); // Completely hangs the computer
 }
 
+int keybuf_i = 0;
+char keybuf[64];
 void keyboard_test(void) {
   char key = get_key_pressed();
   if (key) {
-    printf("%c", key);
+    keybuf[keybuf_i++] = key;
   }
   PIC_sendEOI(1);
 }
@@ -51,14 +53,19 @@ void keyboard_test(void) {
 void syscall(void *ustack) {
   uint32_t sysnum;
   asm("mov %0, eax" : "=r"(sysnum) :);
-  printf("syscall got stack %p\n", ustack);
+  printf("syscall (%d) got stack %p\n", sysnum, ustack);
   switch (sysnum) {
   case SYS_WRITE:
     sys_write(*((uint32_t *)ustack), *((void **)(ustack + 4)),
               *((uint32_t *)(ustack + 8)));
     break;
+  case SYS_READ:
+    sys_read(*((uint32_t *)ustack), *((void **)(ustack + 4)),
+             *((uint32_t *)(ustack + 8)));
+    break;
   case SYS_HLT:
-    asm("hlt");
+    for (;;)
+      asm("hlt");
     break;
   default:
     sys_test();

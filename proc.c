@@ -11,9 +11,9 @@ static proc_t *curproc;
 
 proc_t *new_proc() {
   proc_t ret = {.pid = get_next_pid(), .fds = {NULL_FD}};
-  ret.fds[STDIN] = open_vio(STDIN, 0);
-  ret.fds[STDOUT] = open_vio(STDOUT, 0);
-  ret.fds[STDERR] = open_vio(STDERR, 0);
+  ret.fds[VIRT_STREAM_STDIN] = open_vio(VIRT_STREAM_STDIN, 0);
+  ret.fds[VIRT_STREAM_STDOUT] = open_vio(VIRT_STREAM_STDOUT, 0);
+  ret.fds[VIRT_STREAM_STDERR] = open_vio(VIRT_STREAM_STDERR, 0);
   PLIST[ret.pid] = ret;
   return &PLIST[ret.pid];
 }
