@@ -37,10 +37,6 @@ int main() {
       "mov esi, 0x7c42\n\t"
       "mov edi, %0\n\t"
       "rep; movsb\n\t"
-      // "mov ecx, 2\n\t"
-      // "mov esi, 0x7c5a\n\t"
-      // "mov edi, %1\n\t"
-      // "rep; movsb\n\t"
       "lgdt %1\n\t"
       "mov ax, 0x28\n\t" // load TSS
       "ltr ax\n\t" ::"g"(GDT),
