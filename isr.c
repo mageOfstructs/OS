@@ -50,6 +50,18 @@ void keyboard_test(void) {
   PIC_sendEOI(1);
 }
 
+#define USTACK_PARAM_FN_NAME(type, name)                                       \
+  static inline type __ustack_##name(void **ustack) {                          \
+    type ret = *((type *)*ustack);                                             \
+    *ustack += sizeof(type);                                                   \
+    return ret;                                                                \
+  }
+#define USTACK_PARAM_FN(type) USTACK_PARAM_FN_NAME(type, type)
+
+USTACK_PARAM_FN(int)
+USTACK_PARAM_FN(uint32_t)
+USTACK_PARAM_FN_NAME(void *, ptr)
+
 void syscall(void *ustack) {
   uint32_t sysnum;
   asm("mov %0, eax" : "=r"(sysnum) :);
