@@ -1,6 +1,7 @@
 #include <stdint.h>
 void test_user_function() {
   const char *test = "Awawawawawawa\n";
+  const char *path = "test2";
   const uint32_t test_sz = 14; // we don't need the null byte
   char buf[4];
   buf[3] = '\n';
@@ -25,5 +26,8 @@ void test_user_function() {
       "mov eax, 1\n\t"
       "int 0x80\n\t" ::"r"(1),
       "r"(&buf), "r"(4));
-  asm("mov eax, 99; int 0x80");
+  asm("push %0\n\t"
+      "mov eax, 11\n\t"
+      "int 0x80" ::"m"(path));
+  // asm("mov eax, 99; int 0x80");
 }

@@ -156,13 +156,13 @@ int __get_inode_from_dir(fs_ext2_ctx_t *ctx, const inode_t *dir, char *name,
       printf("\nNode: ");
       display_str(dir_entry->name, cur_dentry_name_length);
       if (name_length == cur_dentry_name_length &&
-          !strcmp(name, dir_entry->name)) {
+          !strcmp_len(name, dir_entry->name, cur_dentry_name_length)) {
         *ret = dir_entry->inode;
         return 0;
       }
     dir_print_loopend:
-      dir_entry = (void *)dir_entry + (8 + cur_dentry_name_length) + 4 -
-                  (8 + cur_dentry_name_length) % 4;
+      dir_entry = (void *)dir_entry + (8 + cur_dentry_name_length) +
+                  (4 - (8 + cur_dentry_name_length) % 4) % 4;
       cur_ptr++;
     }
   }

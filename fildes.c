@@ -2,6 +2,8 @@
 
 #include "vio.h"
 
+STRUCT_EQ(fildes_t);
+
 const fildes_t NULL_FD = {.type = NULL_TYPE, .perms = 0};
 
 int read(fildes_t *fildes, uint32_t n, void *ret) {

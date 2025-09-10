@@ -11,8 +11,6 @@
 #include "vm.h"
 #include <stdint.h>
 
-STRUCT_EQ(fildes_t);
-
 static uint64_t GDT[6];
 static uint8_t GDTR[6];
 

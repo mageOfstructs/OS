@@ -31,12 +31,13 @@ zeroes.bin:
 OS.bin: everything.bin zeroes.bin
 	cat everything.bin zeroes.bin > "OS.bin"
 
-testdisk.img: out/test_usermode.o
+testdisk.img: out/test_usermode.o out/test_usermode2.o
 	yes | mkfs.ext2 ./testdisk.img
 	sudo mount ./testdisk.img tmp
 	echo "Hello World" | sudo tee tmp/hello
 	i386-elf-ld -o out/test -Ttext 0xA00000 out/test_usermode.o --oformat binary
-	sudo mv out/test tmp/
+	i386-elf-ld -o out/test2 -Ttext 0xA00000 out/test_usermode2.o --oformat binary
+	sudo mv out/test{,2} tmp/
 	sudo umount tmp
 
 clean:

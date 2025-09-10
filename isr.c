@@ -63,6 +63,9 @@ void syscall(void *ustack) {
     sys_read(*((uint32_t *)ustack), *((void **)(ustack + 4)),
              *((uint32_t *)(ustack + 8)));
     break;
+  case SYS_EXEC:
+    sys_exec(*((char **)ustack));
+    break;
   case SYS_HLT:
     for (;;)
       asm("hlt");

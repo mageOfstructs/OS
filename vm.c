@@ -29,6 +29,15 @@ static inline uint32_t __vaddr_get_poff(uint32_t vaddr) {
 }
 static inline bool __entry_present(uint32_t entry) { return entry & 1; }
 
+static inline void __native_flush_tlb_single(unsigned long addr) {
+  asm volatile("invlpg [%0]" ::"r"(addr) : "memory");
+}
+
+static inline void __tlb_flush() {
+  asm volatile("mov eax, cr3\n\t"
+               "mov cr3, eax");
+}
+
 void fill_pde(pde_t *p, uint32_t addr, bool write_allowed,
               bool available_to_userspace) {
   p->flags = 1; // we'll do swap later
@@ -185,6 +194,9 @@ int vm_map_ext(uint32_t vaddr, uint32_t len, uint32_t *old, uint32_t *new,
       if (!new) {
         uint32_t paddr = (uint32_t)phys_alloc(1);
         KASSERT(paddr);
+        if (is_pte_present(pt, pt_i))
+          __native_flush_tlb_single(((uint32_t)pd_i) << 22 | ((uint32_t)pt_i)
+                                                                 << 12);
         fill_pte((pte_t *)&pt[pt_i++], paddr, writable, user, false);
       } else
         pt[pt_i] = new[pte_buf_i];
@@ -207,15 +219,6 @@ int vm_chk_map(uint32_t vaddr) {
     ret++;
   }
   return ret;
-}
-
-static inline void __native_flush_tlb_single(unsigned long addr) {
-  asm volatile("invlpg [%0]" ::"r"(addr) : "memory");
-}
-
-static inline void __tlb_flush() {
-  asm volatile("mov eax, cr3\n\t"
-               "mov cr3, eax");
 }
 
 int vm_unmap(uint32_t vaddr_start, uint32_t len) {

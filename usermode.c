@@ -31,6 +31,7 @@ void setup_tss(gdte_t *gdt) {
 void load_usermode_prog(fildes_t *fd) {
   if (fd->type != EXT2_FILE_TYPE) {
     err("Can only use ext2 fds!");
+    return;
   }
   uint32_t userprog_sz = fd->data->ext2_data.sz;
   uint32_t usermode_start = DEF_USERPROG_START,

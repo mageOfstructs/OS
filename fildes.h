@@ -1,6 +1,7 @@
 #ifndef FILDES_H
 #define FILDES_H
 
+#include "utils.h"
 #define VIRT_STREAM_STDIN 0
 #define VIRT_STREAM_STDOUT 1
 #define VIRT_STREAM_STDERR 2
@@ -45,5 +46,7 @@ fildes_t open_ext2(char *path, uint8_t perms);
 int read_ext2(fildes_t *fildes, uint32_t n, void *ret);
 void close_ext2(fildes_t *fildes);
 void init_fs();
+
+bool fildes_t_cmp(const fildes_t *s1, const fildes_t *s2);
 
 #endif // !FILDES_H
