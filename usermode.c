@@ -34,6 +34,7 @@ void load_usermode_prog(fildes_t *fd) {
     return;
   }
   uint32_t userprog_sz = fd->data->ext2_data.sz;
+  myproc()->ctx.addr_sp_sz = userprog_sz;
   uint32_t usermode_start = DEF_USERPROG_START,
            usercode_pages = ceild(userprog_sz, PG_SIZE);
   printf("program size: %d\n", userprog_sz);
@@ -44,8 +45,21 @@ void load_usermode_prog(fildes_t *fd) {
                      true) == 0);
 
   KASSERT(read(fd, userprog_sz, (void *)DEF_USERPROG_START) == userprog_sz);
-  set_cur_proc(new_proc());
   printf("User stack: %p", usermode_start + USER_STACK_PAGES * PG_SIZE - 1);
-  jump_usermode((void (*)())DEF_USERPROG_START,
-                usermode_start + USER_STACK_PAGES * PG_SIZE - 1);
+
+  uint32_t eip = DEF_USERPROG_START,
+           esp = usermode_start + USER_STACK_PAGES * PG_SIZE - 1;
+  myproc()->ctx.eip = eip;
+  myproc()->ctx.regs.esp = esp;
+  myproc()->ctx.regs.ebp = esp;
+  jump_usermode((void (*)())DEF_USERPROG_START, esp);
+}
+
+void load_new_usermode_prog(fildes_t *fd) {
+  if (fd->type != EXT2_FILE_TYPE) {
+    err("Can only use ext2 fds!");
+    return;
+  }
+  set_cur_proc(new_proc());
+  load_usermode_prog(fd);
 }

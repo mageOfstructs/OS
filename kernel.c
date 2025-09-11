@@ -69,7 +69,7 @@ int main() {
     close_ext2(&hello_fd);
 
     fildes_t test_fd = open_ext2("test", 0);
-    load_usermode_prog(&test_fd);
+    load_new_usermode_prog(&test_fd);
     if (test_fd.type == NULL_TYPE || fildes_t_cmp(&test_fd, &NULL_FD)) {
       printf("open failed!\n");
       return 0;
