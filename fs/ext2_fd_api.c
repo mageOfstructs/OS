@@ -46,7 +46,7 @@ int read_ext2(fildes_t *fildes, uint32_t n, void *ret) {
 
   uint32_t cur_cursor = data->cursor;
   uint32_t blocki;
-  while (cur_cursor < (data->cursor + n + FS_GLOBAL_CTX.block_sz)) {
+  while (cur_cursor < (data->cursor + n)) {
     blocki = cur_cursor / FS_GLOBAL_CTX.block_sz;
     if (!get_bit((uint8_t *)&data->bitmap, blocki)) {
       set_bit((uint8_t *)&data->bitmap, blocki);
