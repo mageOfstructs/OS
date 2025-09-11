@@ -5,14 +5,44 @@
 #include <stdint.h>
 #define MAX_FD 128
 
-// TODO: this should store the context at some point
+typedef enum proc_state { ACTIVE, WAITING, BLOCKED, DEAD } proc_state_t;
+
+typedef struct regs {
+  uint32_t edi;
+  uint32_t esi;
+
+  uint32_t ebp;
+  uint32_t esp;
+
+  uint32_t ebx;
+  uint32_t edx;
+  uint32_t ecx;
+  uint32_t eax;
+} regs_t;
+
+// intended to be directly mapped onto some stack
+typedef struct proc_ctx {
+  regs_t regs;
+
+  uint32_t cs;
+  uint32_t eflags;
+  uint32_t eip;
+
+  void *addr_sp;
+  uint32_t addr_sp_sz;
+} proc_ctx_t;
+
 typedef struct proc {
   uint32_t pid;
+  proc_ctx_t ctx;
   fildes_t fds[MAX_FD];
+  proc_state_t state;
 } proc_t;
 
 proc_t *new_proc();
 void set_cur_proc(proc_t *p);
 proc_t *myproc();
+void schedule(proc_ctx_t *old_ctx);
+void dbg_ctx(proc_ctx_t *ctx);
 
 #endif // !PROC_H
