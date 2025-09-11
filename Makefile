@@ -14,7 +14,7 @@ out/%.o: %.asm
 	nasm $< $(NASMFLAGS) -o $@
 
 boot.bin: full_kernel.bin boot.asm
-	echo Kernel size: $(shell bc <<< "$$(du -b $< | cut -f1) / 512 + 1")
+	@echo Kernel size: $(shell bc <<< "$$(du -b $< | cut -f1) / 512 + 1")
 	export kernel_size=$(shell bc <<< "$$(du -b $< | cut -f1) / 512 + 1"); \
 	sed -E boot.asm -e "s/(KERNEL_SIZE equ )0/\1$$kernel_size/" > out/boot.asm
 	nasm "out/boot.asm" -f bin -o boot.bin
