@@ -29,8 +29,10 @@ typedef struct proc_ctx {
   uint32_t eflags;
 
   void *addr_sp;
-  uint32_t addr_sp_sz;
+  uint32_t addr_sp_sz; // NOTE: ONLY takes code segment into account!
 } proc_ctx_t;
+
+extern const proc_ctx_t DEF_USER_CTX;
 
 typedef struct proc {
   uint32_t pid;

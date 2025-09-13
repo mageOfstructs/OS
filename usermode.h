@@ -7,6 +7,9 @@
 
 #define USER_STACK_PAGES 4
 #define DEF_USERPROG_START 0x00A00000
+#define DEF_USER_EFLAGS 0x3200 // set IOPL to 3 and set interrupt flag
+#define USER_DATA_SEG ((4 * 8) | 3)
+#define USER_CODE_SEG ((3 * 8) | 3)
 
 typedef struct gdte {
   uint16_t llimit;
