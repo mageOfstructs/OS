@@ -3,7 +3,6 @@
 #include "phys_alloc.h"
 #include "printf.h"
 #include "utils.h"
-#include <stdint.h>
 
 static uint32_t page_dir[1024] __attribute__((aligned(4096)));
 static uint32_t kernel_pt[1024] __attribute__((aligned(4096)));
@@ -205,6 +204,27 @@ int vm_map_ext(uint32_t vaddr, uint32_t len, uint32_t *old, uint32_t *new,
     }
     pd_i++;
     pt_i = 0;
+  }
+  return 0;
+}
+
+/**
+ * allocates sz pages and places entries into buf
+ **/
+int vm_map_buf(void *buf, size_t sz, bool writable, bool user) {
+  size_t paddr;
+  for (uint32_t i = 0; i < sz; i++) {
+    paddr = (size_t)phys_alloc(1);
+    if (!paddr) {
+      size_t pte;
+      for (int j = 0; j < i; i++) {
+        pte = ((uint32_t *)buf)[j];
+        phys_dealloc((void *)(pte & ~0xFFF));
+      }
+      return -1;
+    }
+    KASSERT(paddr);
+    fill_pte((pte_t *)buf + i, paddr, writable, user, false);
   }
   return 0;
 }
