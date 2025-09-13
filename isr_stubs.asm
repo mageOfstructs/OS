@@ -71,9 +71,11 @@ isr_wrapper ata
 global isr_test
 extern syscall
 isr_test:
-    push dword [esp+12]
+    pushad
+    mov edx, [esp+12+8*4]
+    mov [esp+12], edx ; overwrite esp with the one from the interrupt stack frame
     call syscall
-    pop eax
+    add esp, 8*4
     iret
 
 global isr_keyboard
