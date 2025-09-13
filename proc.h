@@ -24,9 +24,9 @@ typedef struct regs {
 typedef struct proc_ctx {
   regs_t regs;
 
+  uint32_t eip;
   uint32_t cs;
   uint32_t eflags;
-  uint32_t eip;
 
   void *addr_sp;
   uint32_t addr_sp_sz;
