@@ -45,6 +45,7 @@ void load_usermode_prog(fildes_t *fd) {
                      true) == 0);
 
   KASSERT(read(fd, userprog_sz, (void *)DEF_USERPROG_START) == userprog_sz);
+  close_ext2(fd);
   printf("User stack: %p", usermode_start + USER_STACK_PAGES * PG_SIZE - 1);
 
   uint32_t eip = DEF_USERPROG_START,
