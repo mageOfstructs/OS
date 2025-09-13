@@ -45,4 +45,6 @@ proc_t *myproc();
 void schedule(proc_ctx_t *old_ctx);
 void dbg_ctx(proc_ctx_t *ctx);
 
+extern __attribute__((noreturn)) void ctx_switch(proc_ctx_t ctx);
+
 #endif // !PROC_H
