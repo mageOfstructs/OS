@@ -3,6 +3,8 @@
 #include "phys_alloc.h"
 #include "printf.h"
 #include "utils.h"
+#include <stddef.h>
+#include <stdint.h>
 
 static uint32_t page_dir[1024] __attribute__((aligned(4096)));
 static uint32_t kernel_pt[1024] __attribute__((aligned(4096)));
@@ -227,6 +229,13 @@ int vm_map_buf(void *buf, size_t sz, bool writable, bool user) {
     fill_pte((pte_t *)buf + i, paddr, writable, user, false);
   }
   return 0;
+}
+
+void vm_unmap_buf(void *buf, size_t sz) {
+  uint32_t *entries = (uint32_t *)buf;
+  for (size_t i = 0; i < sz; i++) {
+    phys_dealloc((void *)(entries[i] & ~0xFFF));
+  }
 }
 
 int vm_chk_map(uint32_t vaddr) {

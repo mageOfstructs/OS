@@ -54,6 +54,7 @@ int vm_map_ext(uint32_t vaddr, uint32_t len, uint32_t *old, uint32_t *n,
                bool writable, bool user);
 int vm_chk_map(uint32_t vaddr);
 int vm_map_buf(void *buf, size_t sz, bool writable, bool user);
+void vm_unmap_buf(void *buf, size_t sz);
 void *get_physaddr(void *virtualaddr);
 
 #endif // !VM_H

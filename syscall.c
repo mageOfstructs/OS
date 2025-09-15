@@ -70,9 +70,7 @@ void sys_fork(proc_ctx_t *ctx) {
 
 // TODO: exit code
 void sys_exit() {
-  // asm volatile("cli");
   myproc()->state = DEAD;
-  for (;;)
-    asm("hlt");
-  // asm volatile("sti");
+  rm_curproc();
+  dispatch_curproc();
 }

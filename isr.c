@@ -94,7 +94,7 @@ void syscall(proc_ctx_t ctx) {
 
 void timer(proc_ctx_t ctx) {
   // printf("t");
-  schedule(&ctx);
+  scheduler(&ctx);
   PIC_sendEOI(0);
 }
 

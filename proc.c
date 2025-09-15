@@ -1,11 +1,13 @@
 #include "proc.h"
 #include "fildes.h"
 #include "malloc.h"
+#include "math.h"
 #include "utils.h"
 #include "vio.h"
 #include "log.h"
 #include "llist.h"
 #include "usermode.h"
+#include "vm.h"
 #include <stdint.h>
 
 const proc_ctx_t DEF_USER_CTX = {.eip = DEF_USERPROG_START,
@@ -39,6 +41,35 @@ proc_t *new_proc() {
   return &n->val;
 }
 
+static inline uint32_t get_proc_pages(proc_ctx_t *ctx) {
+  return ceild(ctx->addr_sp_sz, PG_SIZE) + USER_STACK_PAGES;
+}
+
+void rm_proc(llist_node_proc_t *proc) {
+  llist_node_proc_t_remove(&PLIST, proc);
+  for (int i = 0; i < MAX_FD; i++) {
+    if (proc->val.fds[i].type != NULL_TYPE)
+      close(&proc->val.fds[i]);
+  }
+  vm_unmap_buf(proc->val.ctx.addr_sp, get_proc_pages(&proc->val.ctx));
+  kfree(proc, sizeof(llist_node_proc_t));
+}
+
+void rm_curproc() {
+  llist_node_proc_t *proc_to_rm = curproc;
+  curproc = curproc->next;
+  if (!curproc)
+    curproc = PLIST.head;
+  rm_proc(proc_to_rm);
+}
+
+// updates context (only registers, not address space) of the currently running
+// process
+inline int update_curproc_ctx(proc_ctx_t *ctx) {
+  return memcpy(ctx, &myproc()->ctx,
+                sizeof(proc_ctx_t) - 8); // don't overwrite address space stuff
+}
+
 [[deprecated("PLEASE NO USE")]]
 void set_cur_proc(proc_t *p) {
   // oh god please no, if the scheduler breaks this is the reason
@@ -63,10 +94,7 @@ void dbg_ctx(proc_ctx_t *ctx) {
   printf("CS: %p\n", ctx->cs);
 }
 
-void switch_proc(llist_node_proc_t *new_proc, proc_ctx_t *old_ctx) {
-  memcpy(old_ctx, &curproc->val.ctx, sizeof(proc_ctx_t));
-  curproc->val.state = WAITING;
-
+void dispatch(llist_node_proc_t *new_proc) {
   curproc = new_proc;
   curproc->val.state = ACTIVE;
 
@@ -76,9 +104,17 @@ void switch_proc(llist_node_proc_t *new_proc, proc_ctx_t *old_ctx) {
   ctx_switch(new_ctx);
 }
 
-void schedule(proc_ctx_t *old_ctx) {
+void dispatch_curproc() { dispatch(curproc); }
+
+void switch_proc(llist_node_proc_t *new_proc, proc_ctx_t *old_ctx) {
+  memcpy(old_ctx, &curproc->val.ctx, sizeof(proc_ctx_t));
+  curproc->val.state = WAITING;
+  dispatch(new_proc);
+}
+
+llist_node_proc_t *schedule() {
   if (PLIST.sz < 2)
-    return;
+    return PLIST.head;
   llist_node_proc_t *new_proc = curproc;
   do {
     new_proc = new_proc->next;
@@ -86,6 +122,16 @@ void schedule(proc_ctx_t *old_ctx) {
       new_proc = PLIST.head;
   } while (new_proc->val.state != WAITING && new_proc != curproc);
   if (new_proc->val.state == WAITING) {
+    return new_proc;
+  }
+  return NULL;
+}
+
+void scheduler(proc_ctx_t *old_ctx) {
+  if (PLIST.sz < 2)
+    return;
+  llist_node_proc_t *new_proc = schedule();
+  if (new_proc) {
     printf("Scheduling!\n");
     switch_proc(new_proc, old_ctx);
   } else {
