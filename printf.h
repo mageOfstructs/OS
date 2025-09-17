@@ -26,6 +26,6 @@
 
 int printf(const char *format, ...);
 void display_str(const char *str, uint32_t len);
-void put_char(char c, volatile u16 **off);
+void put_char(char c);
 
 #endif // !PRINTF_H
