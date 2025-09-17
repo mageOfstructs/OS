@@ -36,6 +36,7 @@ proc_t *new_proc() {
   ret.fds[VIRT_STREAM_STDERR] = open_vio(VIRT_STREAM_STDERR, 0);
   llist_node_proc_t *n = kalloc(sizeof(llist_node_proc_t));
   KASSERT(n);
+  n->next = n->prev = NULL;
   n->val = ret;
   llist_pushb_proc_t(&PLIST, n);
   return &n->val;
@@ -45,8 +46,16 @@ static inline uint32_t get_proc_pages(proc_ctx_t *ctx) {
   return ceild(ctx->addr_sp_sz, PG_SIZE) + USER_STACK_PAGES;
 }
 
+void proc_hlt() {
+  printf("Everything exited!");
+  for (;;)
+    asm("cli; hlt");
+}
+
 void rm_proc(llist_node_proc_t *proc) {
   llist_node_proc_t_remove(&PLIST, proc);
+  if (!PLIST.sz)
+    proc_hlt();
   for (int i = 0; i < MAX_FD; i++) {
     if (proc->val.fds[i].type != NULL_TYPE)
       close(&proc->val.fds[i]);
@@ -56,10 +65,14 @@ void rm_proc(llist_node_proc_t *proc) {
 }
 
 void rm_curproc() {
+  log("attempting to remove curproc from PLIST\n");
   llist_node_proc_t *proc_to_rm = curproc;
+  log("old curproc: %p\n", curproc);
   curproc = curproc->next;
   if (!curproc)
     curproc = PLIST.head;
+  log("new curproc: %p\n", curproc);
+  log("New proc PID is %d\n", curproc->val.pid);
   rm_proc(proc_to_rm);
 }
 
@@ -97,17 +110,25 @@ void dbg_ctx(proc_ctx_t *ctx) {
 void dispatch(llist_node_proc_t *new_proc) {
   curproc = new_proc;
   curproc->val.state = ACTIVE;
+  uint32_t usercode_pages = ceild(curproc->val.ctx.addr_sp_sz, PG_SIZE);
+  vm_map_ext(DEF_USERPROG_START, usercode_pages, NULL, curproc->val.ctx.addr_sp,
+             false, true);
+  vm_map_ext(DEF_USERPROG_START + usercode_pages * PG_SIZE, USER_STACK_PAGES,
+             NULL, curproc->val.ctx.addr_sp, true, true);
 
   proc_ctx_t new_ctx = new_proc->val.ctx;
   log("New context:\n");
   dbg_ctx(&new_proc->val.ctx);
+  log("Switching to proc %d\n", curproc->val.pid);
   ctx_switch(new_ctx);
 }
 
 void dispatch_curproc() { dispatch(curproc); }
 
 void switch_proc(llist_node_proc_t *new_proc, proc_ctx_t *old_ctx) {
-  memcpy(old_ctx, &curproc->val.ctx, sizeof(proc_ctx_t));
+  memcpy(old_ctx, &curproc->val.ctx, sizeof(proc_ctx_t) - 8);
+  // vm_map_ext(DEF_USERPROG_START, get_proc_pages(old_ctx), old_ctx->addr_sp,
+  //            NULL, true, true);
   curproc->val.state = WAITING;
   dispatch(new_proc);
 }
@@ -135,8 +156,6 @@ void scheduler(proc_ctx_t *old_ctx) {
     printf("Scheduling!\n");
     switch_proc(new_proc, old_ctx);
   } else {
-    printf("Everything exited!");
-    for (;;)
-      asm("cli; hlt");
+    proc_hlt();
   }
 }

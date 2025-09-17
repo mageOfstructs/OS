@@ -2,6 +2,7 @@
 #define LOG_H
 
 #include <stdarg.h>
+#include "printf.h"
 
 #define log(format, ...)                                                       \
   printf("%s: " format, __func__ __VA_OPT__(, ) __VA_ARGS__);

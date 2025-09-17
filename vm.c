@@ -1,4 +1,8 @@
 #include "vm.h"
+#include "binops.h"
+#include "idt.h"
+#include "kstack_alloc.h"
+#include "log.h"
 #include "malloc.h"
 #include "phys_alloc.h"
 #include "printf.h"
@@ -7,6 +11,7 @@
 #include <stdint.h>
 
 static uint32_t page_dir[1024] __attribute__((aligned(4096)));
+static uint32_t zero_page_dir[1024] __attribute__((aligned(4096)));
 static uint32_t kernel_pt[1024] __attribute__((aligned(4096)));
 
 // static uint32_t pt_space_pt[1024] __attribute__((aligned(4096)));
@@ -48,7 +53,8 @@ void fill_pde(pde_t *p, uint32_t addr, bool write_allowed,
     p->flags |= 4;
   p->avladdr = (uint8_t)(addr >> 8);
   p->haddr = (uint16_t)(addr >> 16);
-  printf("fill_pde: %p", *p);
+  log("fill_pde: pg[%p] = %p\n",
+      ((size_t)p - (size_t)page_dir) / sizeof(uint32_t), *p);
 }
 
 void fill_pte(pte_t *p, uint32_t addr, bool write_allowed,
@@ -103,8 +109,8 @@ pte_t *get_pte(uint32_t vaddr) {
 
 uint32_t *alloc_pt() {
   for (int i = 0; i < 1024; i++) {
-    if ((free_pts_bitmap[i / 8] >> (i % 8)) & 1) {
-      free_pts_bitmap[i / 8] |= 1 << (i % 8);
+    if (!get_bit(free_pts_bitmap, i)) {
+      set_bit(free_pts_bitmap, i);
       for (int j = 0; j < 1024; j++) {
         pt_space[i * 1024 + j] = BLANK_PTE;
       }
@@ -289,6 +295,7 @@ void enable_paging(void) {
   // printf("physaddr of 0x4800 is: %p\n", get_physaddr((void *)0x4800));
   // printf("physaddr of 0x1410 is: %p\n", get_physaddr((void *)0x1410));
 
+  dbg_idtr();
   asm volatile("mov eax, %0\n\t"
                "mov cr3, eax\n\t"
                "mov eax, cr0\n\t"
@@ -320,6 +327,7 @@ void enable_paging(void) {
   //
   // printf("\n%d\n", vm_unmap(0x12345678, 2));
   // printf("%c", *((char *)0x12346678));
+  log("Paging enabled!\n");
 }
 
 void setup_vm(void) {
@@ -337,20 +345,40 @@ void setup_vm(void) {
   for (i = 0; i < 1024; i++) {
     // As the address is page aligned, it will always leave 12 bits zeroed.
     // Those bits are used by the attributes ;)
-    kernel_pt[i] =
-        (i * 0x1000) | 3; // attributes: supervisor level, read/write, present.
+    kernel_pt[i] = (i * 0x1000 + 0x8000000) |
+                   3; // attributes: supervisor level, read/write, present.
+    zero_page_dir[i] = (i * 0x1000) | 3;
 
     pt_space_pt[i] = (uint32_t)(((i * 0x1000 + (uint32_t)pt_space)) | 3);
   }
-  fill_pde((pde_t *)page_dir, (unsigned long)kernel_pt, true, false);
+  fill_pde((pde_t *)page_dir, (unsigned long)zero_page_dir, true, false);
+  fill_pde((pde_t *)(&page_dir[0x8000000 >> 22]), (unsigned long)kernel_pt,
+           true, false);
   fill_pde((pde_t *)(&page_dir[1]), (unsigned long)pt_space_pt, true, false);
+
+  uint32_t *stack_pt = alloc_pt();
+  KASSERT(stack_pt);
+  for (int i = 0; i < 1024; i++) {
+    stack_pt[i] = (i * 0x1000 + MIN_STACK - 0x1000) | 3;
+    // log("Stack PTE: %p\n", stack_pt[i]);
+  }
+  fill_pde((pde_t *)(&page_dir[MIN_STACK >> 22]), (uint32_t)stack_pt, true,
+           false);
 
   const uint32_t VM_HEAP_START = 0x00900000;
   init_physalloc(0x00800000, VM_HEAP_START);
+  log("enable_paging: %p\n", enable_paging);
   enable_paging();
 
+  *((uint8_t *)MIN_STACK) = 62;
+  log("Test: %d\n", *((uint8_t *)MIN_STACK));
+
+  // KASSERT(vm_map_ext(VM_HEAP_START, 2, NULL, NULL, true, false) == 0);
   KASSERT(vm_map(VM_HEAP_START, 2) == 0);
   init_kalloc((char *)VM_HEAP_START, 8192);
+
+  *((uint8_t *)MIN_STACK) = 63;
+  log("Test: %d\n", *((uint8_t *)MIN_STACK));
   // Test code, yes this is a very good way to do testing
   // int *test = kalloc(4);
   // *test = 4;

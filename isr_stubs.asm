@@ -68,12 +68,16 @@ isr_stub_table:
 
 isr_wrapper ata
 
+extern avoid_kernel_stack_conflicts
+extern release_stack
+
 global isr_test
 extern syscall
 isr_test:
     pushad
     mov edx, [esp+12+8*4]
     mov [esp+12], edx ; overwrite esp with the one from the interrupt stack frame
+    call avoid_kernel_stack_conflicts
     call syscall
     add esp, 8*4
     iret
@@ -82,7 +86,14 @@ global isr_keyboard
 extern keyboard_test
 isr_keyboard:
   pushad
+  call avoid_kernel_stack_conflicts
   call keyboard_test
+
+  mov eax, esp
+  push eax
+  call release_stack
+  pop eax
+
   popad
   iret
 
@@ -90,7 +101,15 @@ global isr_timer
 extern timer
 isr_timer:
   pushad
+  call avoid_kernel_stack_conflicts
   call timer
+
+  mov eax, esp
+  and eax, 0xFFFFF000 ; hihi :3
+  push eax
+  call release_stack
+  pop eax
+
   popad
   iret
 

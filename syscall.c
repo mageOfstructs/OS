@@ -55,8 +55,8 @@ void sys_fork(proc_ctx_t *ctx) {
 
   np->ctx.addr_sp_sz = myproc()->ctx.addr_sp_sz;
   uint32_t usercode_pages = ceild(np->ctx.addr_sp_sz, PG_SIZE);
-  KASSERT(np->ctx.addr_sp =
-              kalloc((np->ctx.addr_sp_sz + USER_STACK_PAGES) * 4));
+  KASSERT(np->ctx.addr_sp = kalloc(
+              (ceild(np->ctx.addr_sp_sz, PG_SIZE) + USER_STACK_PAGES) * 4));
   // TODO : we currently don't get any writable data segment as
   // load_usermode_prog is too naive for that
   KASSERT(vm_map_buf(np->ctx.addr_sp, usercode_pages, false, true) == 0);

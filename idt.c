@@ -1,5 +1,6 @@
 #include "idt.h"
 #include "printf.h"
+#include "log.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -49,12 +50,19 @@ extern uint32_t isr_timer;
 extern uint32_t isr_ignore;
 extern uint32_t isr_pgf;
 
-void idt_init() {
-  idtr.base = (uintptr_t)&idt[0];
+void dbg_idtr() {
   printf("IDTR: %p\n", &idtr);
   printf("IDTR Base: %p\n", idtr.base);
-  printf("ISR 0: %p\n", isr_stub_table[0]);
+  printf("IDTR Limit: %p\n", idtr.limit);
+}
+
+void idt_init() {
+  idtr.base = (uintptr_t)&idt[0];
   idtr.limit = (uint16_t)sizeof(idt_entry_t) * IDT_MAX_DESCRIPTORS - 1;
+  printf("IDTR: %p\n", &idtr);
+  printf("IDTR Base: %p\n", idtr.base);
+  printf("IDTR Limit: %p\n", idtr.limit);
+  printf("ISR 0: %p\n", isr_stub_table[0]);
 
   for (uint8_t vector = 0; vector < 32; vector++) {
     idt_set_descriptor(vector, isr_stub_table[vector], INT_TYPE_R0);
@@ -75,7 +83,11 @@ void idt_init() {
   idt_set_descriptor(0x20, (uint32_t)&isr_timer, INT_TYPE_R0);
   idt_set_descriptor(0x21, (uint32_t)&isr_keyboard, INT_TYPE_R0);
   idt_set_descriptor(0x2E, (uint32_t)&isr_ata, INT_TYPE_R0);
+  log("IDT Table done\n");
 
-  __asm__ volatile("lidt %0" : : "m"(idtr)); // load the new IDT
-  __asm__ volatile("sti");                   // set the interrupt flag
+  __asm__ volatile("lidt %0\n\t"
+                   "sti"
+                   :
+                   : "m"(idtr)); // load the new IDT
+  log("IDT setup done!\n");
 }

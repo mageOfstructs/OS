@@ -52,6 +52,7 @@ typedef struct tss {
 } __attribute__((packed)) tss_t;
 
 void setup_tss(gdte_t *gdt);
+void set_next_kernel_stack(uint32_t stack);
 extern void jump_usermode(void (*f)(), uint32_t esp);
 void load_usermode_prog(fildes_t *fd);
 void load_new_usermode_prog(fildes_t *fd);

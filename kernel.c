@@ -16,33 +16,64 @@ static uint8_t GDTR[6];
 
 int main() {
   init_serial();
+  printf("Main lives at: %p", main);
+
   // setup GDTR
+  GDT[0] = 0;
+  for (int i = 1; i < 5; i++) {
+    gdte_t *gdte = (gdte_t *)&GDT[i];
+    gdte->llimit = 0xffff;
+    gdte->lbase = 0;
+    gdte->midbase = 0;
+    gdte->accessb = 0b10010010;
+    if (i % 2 == 1)
+      gdte->accessb |= 1 << 3;
+    if (i > 2)
+      gdte->accessb |= 0b01100000;
+    gdte->flags = 0b1100;
+    gdte->hlimit = 0b1111;
+    gdte->hbase = 0;
+  }
   uint32_t gdt_addr = (uint32_t)GDT;
   for (int i = 0; i < 4; i++) {
     GDTR[i + 2] = (gdt_addr >> i * 8) & 0xFF;
   }
   *((uint16_t *)GDTR) = 48; // six GDT entries
-  printf("%p %d\n", GDTR, *((uint16_t *)GDTR));
 
   setup_tss((gdte_t *)&GDT[5]);
   printf("%p %d\n", GDTR, *((uint16_t *)GDTR));
 
-  // relocate the GDT as setup_vm would otherwise overwrite it with a page table
-  // NOTE: This is not a permanent solution! It could be that the kernel grows
-  // so big it's code would overlap with the bootsector and overwrite it when it
-  // is loaded into memory.
-  asm("mov ecx, 8*5\n\t"
-      "mov esi, 0x7c42\n\t"
-      "mov edi, %0\n\t"
-      "rep; movsb\n\t"
-      "lgdt %1\n\t"
-      "mov ax, 0x28\n\t" // load TSS
+  for (int i = 0; i < sizeof(GDT); i++) {
+    printf("%p ", ((uint8_t *)GDT)[i]);
+  }
+  printf("\n");
+
+  // relocate the GDT as setup_vm would otherwise overwrite it with a page
+  // table NOTE: This is not a permanent solution! It could be that the
+  // kernel grows so big it's code would overlap with the bootsector and
+  // overwrite it when it is loaded into memory.
+  asm("lgdt %1\n\t"
+      "jmp 0x08:next\n\t"
+      "next:\n\t"
+
+      // setup segments
+      "mov ax, 0x10\n\t"
+      "mov ds, ax\n\t"
+      "mov ss, ax\n\t"
+      "mov es, ax\n\t"
+      "mov fs, ax\n\t"
+      "mov gs, ax\n\t"
+
+      // load TSS
+      "mov ax, 0x28\n\t"
       "ltr ax\n\t" ::"g"(GDT),
       "m"(GDTR));
 
+  printf("Got here!");
   PIC_remap(0x20, 0x28);
   idt_init();
   setup_vm();
+  printf("Virtual memory intialized!\n");
 
   uint16_t buf[256];
   int ret = identify(buf);

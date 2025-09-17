@@ -1,6 +1,8 @@
 #include "usermode.h"
 #include "fildes.h"
+#include "kstack_alloc.h"
 #include "log.h"
+#include "malloc.h"
 #include "math.h"
 #include "printf.h"
 #include "proc.h"
@@ -28,12 +30,29 @@ void setup_tss(gdte_t *gdt) {
   TSS.iomap_base = sizeof(TSS);
 }
 
+void avoid_kernel_stack_conflicts(proc_ctx_t ctx) {
+  if ((ctx.cs & 3) == 3) { // if we came from ring3
+    set_next_kernel_stack(get_next_stack());
+  }
+}
+
+void set_next_kernel_stack(uint32_t stack) { TSS.esp0 = stack; }
+
 void load_usermode_prog(fildes_t *fd) {
   if (fd->type != EXT2_FILE_TYPE) {
     err("Can only use ext2 fds!");
     return;
   }
   uint32_t userprog_sz = fd->data->ext2_data.sz;
+  if (!myproc()->ctx.addr_sp) {
+    myproc()->ctx.addr_sp =
+        kalloc((ceild(userprog_sz, PG_SIZE) + USER_STACK_PAGES) * 4);
+  } else if (myproc()->ctx.addr_sp_sz < userprog_sz) {
+    myproc()->ctx.addr_sp = krealloc(
+        myproc()->ctx.addr_sp,
+        (ceild(myproc()->ctx.addr_sp_sz, PG_SIZE) + USER_STACK_PAGES) * 4,
+        (ceild(userprog_sz, PG_SIZE) + USER_STACK_PAGES) * 4);
+  }
   myproc()->ctx.addr_sp_sz = userprog_sz;
   uint32_t usermode_start = DEF_USERPROG_START,
            usercode_pages = ceild(userprog_sz, PG_SIZE);

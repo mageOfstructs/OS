@@ -46,7 +46,7 @@ void init_physalloc(uint32_t heap_start, uint32_t heap_end) {
   free_block_t init_fb = {.start = (void *)heap_start,
                           .page_off = 0,
                           .sz = (heap_end - heap_start) / 4096};
-  alloc = init_alloc(freelist_nodes, 2048);
+  alloc = init_alloc(freelist_nodes, 2048 - sizeof(llist_t_fb));
 
   llist_node_fb *node_space = alloc_node();
   KASSERT(node_space);

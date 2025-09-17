@@ -1,12 +1,17 @@
 GCCFLAGS=-ffreestanding -m32 -g -c -masm=intel
-NASMFLAGS=-f elf
+NASMFLAGS=-f elf32 -g
 SRCFILES=$(shell ls *.{asm,c} fs/*.c | grep -P "^(?!(boot|zeroes|kernel_entry)\.asm|test_usermode\.c).*$$")
 
 tmp=$(SRCFILES:%.c=out/%.o)
 OUTFILES=$(tmp:%.asm=out/%.o)
 
-qemu: OS.bin testdisk.img
-	qemu-system-x86_64 -drive format=raw,file="$<",index=0,if=floppy -m 128M -chardev file,id=klog,path=./kernel.log -serial chardev:klog -drive file=./testdisk.img,format=raw,index=0
+qemu: OS.iso
+	qemu-system-i386 -cdrom "$<" -m 1G -chardev file,id=klog,path=./kernel.log -serial chardev:klog -drive file=./testdisk.img,format=raw,index=0
+
+OS.iso: full_kernel.bin isodir/boot/grub/grub.cfg
+	if ! grub-file --is-x86-multiboot2 full_kernel.bin; then echo "No multiboot2 header!" && exit 1; fi
+	cp full_kernel.bin isodir/boot/
+	grub-mkrescue -o OS.iso isodir
 
 out/%.o: %.c
 	i386-elf-gcc $(GCCFLAGS) -c $< -o $@
@@ -20,7 +25,7 @@ boot.bin: full_kernel.bin boot.asm
 	nasm "out/boot.asm" -f bin -o boot.bin
 
 full_kernel.bin: out/kernel_entry.o $(OUTFILES) # WRONG!! kernel_entry.o must be the first in this list!1
-	i386-elf-ld -o "full_kernel.bin" -Ttext 0x8000 $^ --oformat binary
+	i386-elf-ld -g -o "full_kernel.bin" $^
 
 everything.bin: boot.bin
 	cat "boot.bin" "full_kernel.bin" > "everything.bin"
