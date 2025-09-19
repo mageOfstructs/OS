@@ -71,7 +71,7 @@ int combine_fbs(llist_node_fb *cur, llist_node_fb *n) {
     llist_node_fb_remove(freelist_buf, cur);
     // dbg_llist_rev();
     llist_fb_sorted_insert(cur);
-    dbg_llist_rev();
+    // dbg_llist_rev();
     return 1;
   } else if (cur->val.page_off == n->val.page_off + n->val.sz) {
     cur->val.start = (void *)((uint32_t)n->val.start & ~0xFFF);
@@ -179,8 +179,8 @@ void *phys_alloc(uint16_t n) {
 
       void *ret = (void *)((uint32_t)cur->val.start | (uint32_t)(n - 1));
       KASSERT(dealloc_ctx(&alloc, cur, sizeof(llist_node_fb)) == 0);
-      dbg_llist();
-      dbg_llist_rev();
+      // dbg_llist();
+      // dbg_llist_rev();
       printf("phys_alloc: allocated page %p\n", ret);
       return ret;
     }
@@ -207,8 +207,8 @@ void phys_dealloc(void *allocation) {
   //   printf("head before empty\n");
   *new_free_nspace = new_free_n;
   llist_fb_sorted_insert(new_free_nspace);
-  dbg_llist();
-  dbg_llist_rev();
+  // dbg_llist();
+  // dbg_llist_rev();
   // if (freelist_buf->head)
   //   printf("head: %d\n", freelist_buf->head->val.sz);
   // else
