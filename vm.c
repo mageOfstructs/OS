@@ -91,7 +91,7 @@ void *get_physaddr(void *virtualaddr) {
 static inline bool is_pde_present(uint32_t i) { return page_dir[i] & 1; }
 
 static inline bool is_pte_present(uint32_t *pt, uint32_t i) {
-  return pt[i] & 1;
+  return __entry_present(pt[i]);
 }
 
 static inline uint32_t get_addr(uint32_t entry) { return entry & ~0xFFF; }
@@ -198,16 +198,17 @@ int vm_map_ext(uint32_t vaddr, uint32_t len, uint32_t *old, uint32_t *new,
       if (old)
         old[pte_buf_i] = pt[pt_i];
 
+      if (is_pte_present(pt, pt_i))
+        __native_flush_tlb_single(((uint32_t)pd_i) << 22 | ((uint32_t)pt_i)
+                                                               << 12);
       if (!new) {
         uint32_t paddr = (uint32_t)phys_alloc(1);
         KASSERT(paddr);
-        if (is_pte_present(pt, pt_i))
-          __native_flush_tlb_single(((uint32_t)pd_i) << 22 | ((uint32_t)pt_i)
-                                                                 << 12);
-        fill_pte((pte_t *)&pt[pt_i++], paddr, writable, user, false);
+        fill_pte((pte_t *)&pt[pt_i], paddr, writable, user, false);
       } else
         pt[pt_i] = new[pte_buf_i];
       pte_buf_i++;
+      pt_i++;
       len--;
     }
     pd_i++;
