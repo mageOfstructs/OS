@@ -241,7 +241,9 @@ int vm_map_buf(void *buf, size_t sz, bool writable, bool user) {
 void vm_unmap_buf(void *buf, size_t sz) {
   uint32_t *entries = (uint32_t *)buf;
   for (size_t i = 0; i < sz; i++) {
-    phys_dealloc((void *)(entries[i] & ~0xFFF));
+    size_t page_addr = entries[i] & ~0xFFF;
+    phys_dealloc((void *)page_addr);
+    __native_flush_tlb_single(page_addr);
   }
 }
 
