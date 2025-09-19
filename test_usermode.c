@@ -1,5 +1,6 @@
 #include "stdlib/syscalls.h"
 #include "printf.h"
+#include <stdint.h>
 
 void test_user_function() {
   const char *test = "Awawawawawawa\n";
@@ -14,7 +15,15 @@ void test_user_function() {
   write(1, test, test_sz);
   read(0, buf, 3);
   write(1, buf, 4);
-  printf("Hello World from Usermode printf!\n");
+  printf("Hello World from Usermode printf Here are some numbers to prove this "
+         "works: %d %p!\n",
+         32, 0x1000);
+  uint32_t pid = fork();
+  printf("fork ret: %d\n", pid);
+  if (pid != 0)
+    printf("Hello World from Parent!\n");
+  else
+    printf("Hello World from the Child!\n");
   exit(0);
   // asm("push %2\n\t"
   //     "push %1\n\t"
