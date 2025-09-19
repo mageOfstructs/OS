@@ -42,7 +42,7 @@ proc_t *new_proc() {
   return &n->val;
 }
 
-static inline uint32_t get_proc_pages(proc_ctx_t *ctx) {
+inline uint32_t get_proc_pages(proc_ctx_t *ctx) {
   return ceild(ctx->addr_sp_sz, PG_SIZE) + USER_STACK_PAGES;
 }
 
@@ -60,19 +60,21 @@ void rm_proc(llist_node_proc_t *proc) {
     if (proc->val.fds[i].type != NULL_TYPE)
       close(&proc->val.fds[i]);
   }
-  vm_unmap_buf(proc->val.ctx.addr_sp, get_proc_pages(&proc->val.ctx));
-  kfree(proc, sizeof(llist_node_proc_t));
+  // FIXME: we can't free these until we are sure all processes referencing it
+  // are gone (reference counter)
+  // vm_unmap_buf(proc->val.ctx.addr_sp, get_proc_pages(&proc->val.ctx));
+  // kfree(proc, sizeof(llist_node_proc_t));
 }
 
 void rm_curproc() {
   log("attempting to remove curproc from PLIST\n");
   llist_node_proc_t *proc_to_rm = curproc;
-  log("old curproc: %p\n", curproc);
-  curproc = curproc->next;
-  if (!curproc)
-    curproc = PLIST.head;
-  log("new curproc: %p\n", curproc);
-  log("New proc PID is %d\n", curproc->val.pid);
+  // log("old curproc: %p\n", curproc);
+  // curproc = curproc->next;
+  // if (!curproc)
+  //   curproc = PLIST.head;
+  // log("new curproc: %p\n", curproc);
+  // log("New proc PID is %d\n", curproc->val.pid);
   rm_proc(proc_to_rm);
 }
 
@@ -108,13 +110,27 @@ void dbg_ctx(proc_ctx_t *ctx) {
 }
 
 void dispatch(llist_node_proc_t *new_proc) {
+  if (!new_proc)
+    proc_hlt();
+  void *old_proc_addr_sp = curproc->val.ctx.addr_sp;
+
   curproc = new_proc;
   curproc->val.state = ACTIVE;
-  uint32_t usercode_pages = ceild(curproc->val.ctx.addr_sp_sz, PG_SIZE);
-  vm_map_ext(DEF_USERPROG_START, usercode_pages, NULL, curproc->val.ctx.addr_sp,
-             false, true);
-  vm_map_ext(DEF_USERPROG_START + usercode_pages * PG_SIZE, USER_STACK_PAGES,
-             NULL, curproc->val.ctx.addr_sp, true, true);
+  log("(%p != %p)?\n", old_proc_addr_sp, curproc->val.ctx.addr_sp);
+  if (old_proc_addr_sp != curproc->val.ctx.addr_sp) {
+    log("Switching address space!\n");
+    // log("Old (%p): %d\n", curproc->val.ctx.regs.esp,
+    //     *((uint32_t *)curproc->val.ctx.regs.esp));
+    get_physaddr((void *)DEF_USERPROG_START);
+    uint32_t usercode_pages = ceild(curproc->val.ctx.addr_sp_sz, PG_SIZE);
+    vm_map_ext(DEF_USERPROG_START, usercode_pages, NULL,
+               curproc->val.ctx.addr_sp, false, true);
+    get_physaddr((void *)DEF_USERPROG_START);
+    vm_map_ext(DEF_USERPROG_START + usercode_pages * PG_SIZE, USER_STACK_PAGES,
+               NULL, curproc->val.ctx.addr_sp + usercode_pages * 4, true, true);
+    // log("New (%p): %d\n", curproc->val.ctx.regs.esp,
+    //     *((uint32_t *)curproc->val.ctx.regs.esp));
+  }
 
   proc_ctx_t new_ctx = new_proc->val.ctx;
   log("New context:\n");
@@ -135,7 +151,7 @@ void switch_proc(llist_node_proc_t *new_proc, proc_ctx_t *old_ctx) {
 
 llist_node_proc_t *schedule() {
   if (PLIST.sz < 2)
-    return PLIST.head;
+    return NULL;
   llist_node_proc_t *new_proc = curproc;
   do {
     new_proc = new_proc->next;

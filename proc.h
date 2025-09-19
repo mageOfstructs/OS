@@ -41,6 +41,8 @@ typedef struct proc {
   proc_state_t state;
 } proc_t;
 
+typedef struct node llist_node_proc_t;
+
 proc_t *new_proc();
 void set_cur_proc(proc_t *p);
 proc_t *myproc();
@@ -49,6 +51,9 @@ void dispatch_curproc();
 void scheduler(proc_ctx_t *old_ctx);
 void dbg_ctx(proc_ctx_t *ctx);
 int update_curproc_ctx(proc_ctx_t *ctx);
+uint32_t get_proc_pages(proc_ctx_t *ctx);
+llist_node_proc_t *schedule();
+void dispatch(llist_node_proc_t *new_proc);
 
 extern __attribute__((noreturn)) void ctx_switch(proc_ctx_t ctx);
 

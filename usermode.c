@@ -57,11 +57,12 @@ void load_usermode_prog(fildes_t *fd) {
   uint32_t usermode_start = DEF_USERPROG_START,
            usercode_pages = ceild(userprog_sz, PG_SIZE);
   printf("program size: %d\n", userprog_sz);
-  KASSERT(vm_map_ext(usermode_start, usercode_pages, NULL, NULL, false, true) ==
-          0);
-  usermode_start += usercode_pages * PG_SIZE;
-  KASSERT(vm_map_ext(usermode_start, USER_STACK_PAGES, NULL, NULL, true,
-                     true) == 0);
+
+  KASSERT(vm_map_buf(myproc()->ctx.addr_sp, usercode_pages, false, true) == 0);
+  KASSERT(vm_map_buf(myproc()->ctx.addr_sp + usercode_pages * 4,
+                     USER_STACK_PAGES, true, true) == 0);
+  vm_map_ext(DEF_USERPROG_START, get_proc_pages(&myproc()->ctx), NULL,
+             myproc()->ctx.addr_sp, false, true); // perms are ignored
 
   KASSERT(read(fd, userprog_sz, (void *)DEF_USERPROG_START) == userprog_sz);
   close_ext2(fd);

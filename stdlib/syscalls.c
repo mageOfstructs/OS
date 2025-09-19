@@ -1,4 +1,7 @@
 #include "syscalls.h"
+#include "../printf.h"
+#include "../log.h"
+#include <stdint.h>
 
 void write(uint32_t fd, const void *p, uint32_t sz) {
   asm volatile("push %2\n\t"
@@ -29,10 +32,16 @@ __attribute__((noreturn)) void exec(char *path) {
     ;
 }
 
-inline void fork() {
+inline uint32_t fork() {
+  uint32_t ret;
   asm volatile("mov eax, 12\n\t"
-               "int 0x80" ::
-                   : "eax");
+               "int 0x80\n\t"
+               "mov %0, eax\n\t"
+               : "=r"(ret)
+               :
+               : "eax");
+  log("%p => %d\n", &ret, ret);
+  return ret;
 }
 
 // TODO: exit code
