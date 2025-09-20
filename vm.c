@@ -44,6 +44,14 @@ static inline void __tlb_flush() {
                "mov cr3, eax");
 }
 
+static inline uint32_t *__pte_ptr(uint32_t vaddr) {
+  uint32_t pd_i = __vaddr_get_pdei(vaddr);
+  uint32_t pde = page_dir[pd_i];
+  if (!__entry_present(pde))
+    return &page_dir[pd_i];
+  return &((uint32_t *)(pde & ~0xFFF))[__vaddr_get_ptei(vaddr)];
+}
+
 void fill_pde(pde_t *p, uint32_t addr, bool write_allowed,
               bool available_to_userspace) {
   p->flags = 1; // we'll do swap later
@@ -215,6 +223,19 @@ int vm_map_ext(uint32_t vaddr, uint32_t len, uint32_t *old, uint32_t *new,
     pt_i = 0;
   }
   return 0;
+}
+
+int vm_swap_page_which_has_address(size_t addr, uint32_t *buf,
+                                   uint32_t buf_addr_start, uint32_t *old_pte,
+                                   bool writable, bool user) {
+  if (buf_addr_start > addr)
+    return -1;
+
+  uint32_t *pte = __pte_ptr(addr & ~0xFFF);
+  if (!__entry_present(*pte))
+    return -2;
+  return vm_map_ext(addr & ~0xFFF, 1, old_pte,
+                    buf + (addr - buf_addr_start) / PG_SIZE, writable, user);
 }
 
 /**

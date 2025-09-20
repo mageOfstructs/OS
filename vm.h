@@ -52,6 +52,9 @@ int vm_map(uint32_t vaddr_start, uint32_t len);
 int vm_unmap(uint32_t vaddr_start, uint32_t len);
 int vm_map_ext(uint32_t vaddr, uint32_t len, uint32_t *old, uint32_t *n,
                bool writable, bool user);
+int vm_swap_page_which_has_address(size_t addr, uint32_t *buf,
+                                   uint32_t buf_addr_start, uint32_t *old_pte,
+                                   bool writable, bool user);
 int vm_chk_map(uint32_t vaddr);
 int vm_map_buf(void *buf, size_t sz, bool writable, bool user);
 void vm_unmap_buf(void *buf, size_t sz);
