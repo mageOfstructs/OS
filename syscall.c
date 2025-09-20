@@ -1,15 +1,15 @@
 #include "syscall.h"
-#include "fildes.h"
-#include "malloc.h"
-#include "printf.h"
 #include "fd_perms.h"
+#include "fildes.h"
+#include "log.h"
+#include "malloc.h"
+#include "mem.h"
+#include "printf.h"
 #include "proc.h"
 #include "usermode.h"
 #include "utils.h"
 #include "vm.h"
-#include "log.h"
 #include <stdint.h>
-#include "mem.h"
 
 void sys_write(uint32_t fd, void *buf, uint32_t sz) {
   write(&myproc()->fds[fd], sz, buf);
