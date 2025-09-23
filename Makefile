@@ -1,12 +1,13 @@
 GCCFLAGS=-ffreestanding -m32 -g -c -masm=intel
 NASMFLAGS=-f elf32 -g
-SRCFILES=$(shell ls *.{asm,c} fs/*.c stdlib/printf.c | grep -P "^(?!(boot|zeroes|kernel_entry)\.asm|test_usermode\.c|user_putchar\.c).*$$")
+SRCFILES=$(shell ls *.{asm,c,rs} fs/*.c stdlib/printf.c | grep -P "^(?!(boot|zeroes|kernel_entry)\.asm|test_usermode\.c|user_putchar\.c).*$$")
 
 STDLIB_SRCFILES=$(wildcard stdlib/*.c)
 STDLIB_OUTFILES=$(STDLIB_SRCFILES:%.c=out/%.o)
 
 tmp=$(SRCFILES:%.c=out/%.o)
-OUTFILES=$(tmp:%.asm=out/%.o)
+tmp2=$(tmp:%.rs=out/%.o)
+OUTFILES=$(tmp2:%.asm=out/%.o)
 
 qemu: OS.iso testdisk.img
 	qemu-system-i386 -cdrom "$<" -m 1G -chardev file,id=klog,path=./kernel.log -serial chardev:klog -drive file=./testdisk.img,format=raw,index=0
@@ -23,6 +24,9 @@ out/stdlib/%.o: stdlib/%.c
 
 out/%.o: %.asm
 	nasm $< $(NASMFLAGS) -o $@
+
+out/%.o: %.rs
+	rustc $< --target x86_64-unknown-none --emit obj -o $@
 
 boot.bin: full_kernel.bin boot.asm
 	@echo Kernel size: $(shell bc <<< "$$(du -b $< | cut -f1) / 512 + 1")

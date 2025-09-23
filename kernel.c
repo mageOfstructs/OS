@@ -14,9 +14,13 @@
 static uint64_t GDT[6];
 static uint8_t GDTR[6];
 
+extern void test_rust(void);
+
 int main() {
   init_serial();
   printf("Main lives at: %p", main);
+  test_rust();
+  asm("cli; hlt");
 
   // setup GDTR
   GDT[0] = 0;
