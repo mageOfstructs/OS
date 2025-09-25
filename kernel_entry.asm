@@ -1,5 +1,5 @@
 [bits 32]
-[extern main]
+[extern kernel_main]
 
 MH_MAGIC equ 0xE85250D6
 MH_ARCH equ 0
@@ -22,6 +22,14 @@ dd kernel_entry
 dd 0
 entry_tag_end:
 
+inforeq_tag:
+dw 1
+dw 0
+dd inforeq_tag_end - inforeq_tag
+dd 9
+dd 0
+inforeq_tag_end:
+
 
 ; end tag
 dd 0
@@ -39,7 +47,8 @@ _start:
 kernel_entry:
 
 mov esp, stack_top
-call main
+push ebx
+call kernel_main
 
 loop:
 hlt

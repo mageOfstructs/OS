@@ -354,7 +354,9 @@ void enable_paging(void) {
   log("Paging enabled!\n");
 }
 
-void setup_vm(void) {
+void setup_vm(uint32_t kernel_base_addr) {
+  uint32_t kba_pdi = __vaddr_get_pdei(kernel_base_addr);
+  log("Kernel PDE: %p\n", kba_pdi);
   // set each entry to not present
   unsigned int i;
   for (i = 0; i < 1024; i++) {
@@ -369,15 +371,15 @@ void setup_vm(void) {
   for (i = 0; i < 1024; i++) {
     // As the address is page aligned, it will always leave 12 bits zeroed.
     // Those bits are used by the attributes ;)
-    kernel_pt[i] = (i * 0x1000 + 0x8000000) |
+    kernel_pt[i] = (i * 0x1000 + (kba_pdi << 22)) |
                    3; // attributes: supervisor level, read/write, present.
     zero_page_dir[i] = (i * 0x1000) | 3;
 
     pt_space_pt[i] = (uint32_t)(((i * 0x1000 + (uint32_t)pt_space)) | 3);
   }
   fill_pde((pde_t *)page_dir, (unsigned long)zero_page_dir, true, false);
-  fill_pde((pde_t *)(&page_dir[0x8000000 >> 22]), (unsigned long)kernel_pt,
-           true, false);
+  fill_pde((pde_t *)(&page_dir[kba_pdi]), (unsigned long)kernel_pt, true,
+           false);
   fill_pde((pde_t *)(&page_dir[1]), (unsigned long)pt_space_pt, true, false);
 
   uint32_t *stack_pt = alloc_pt();

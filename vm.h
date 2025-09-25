@@ -47,7 +47,7 @@ typedef struct pte {
   uint16_t haddr;    // bits 16-31 of addr
 } __attribute__((packed)) pte_t;
 
-void setup_vm(void);
+void setup_vm(uint32_t kernel_base_addr);
 int vm_map(uint32_t vaddr_start, uint32_t len);
 int vm_unmap(uint32_t vaddr_start, uint32_t len);
 int vm_map_ext(uint32_t vaddr, uint32_t len, uint32_t *old, uint32_t *n,
