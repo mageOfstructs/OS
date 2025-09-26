@@ -12,8 +12,6 @@ dd MH_ARCH                                 ; 32 bit i386
 dd MH_SZ                                   ; header length
 dd -(MH_MAGIC + MH_ARCH + MH_SZ)
 
-
-
 entry_tag:
 dw 3
 dw 0
@@ -26,10 +24,9 @@ inforeq_tag:
 dw 1
 dw 0
 dd inforeq_tag_end - inforeq_tag
-dd 9
-dd 0
+dd 9 ; elf sections
+dd 6 ; mmap
 inforeq_tag_end:
-
 
 ; end tag
 dd 0
@@ -43,6 +40,8 @@ stack_top:
 
 section .text
 global _start
+global start
+start:
 _start:
 kernel_entry:
 
