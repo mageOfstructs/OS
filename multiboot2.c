@@ -31,6 +31,29 @@ void dbg_mb2(uint32_t *mb_info) {
       log("kernel loaded at %p!\n",
           ((struct multiboot_tag_load_base_addr *)mb_tag)->load_base_addr);
       break;
+    case MULTIBOOT_TAG_TYPE_MMAP:;
+      struct multiboot_tag_mmap *mmap = (struct multiboot_tag_mmap *)mb_tag;
+      if (mmap->entry_version != 0) {
+        warn("unknown mmap entry version: %d\n", mmap->entry_version);
+      }
+      printf("RAM Sections:\n");
+      for (int i = 0; i < (mmap->size - 16) / mmap->entry_size; i++) {
+        printf("Section %p-", mmap->entries[i].addr);
+        printf("%p; ", mmap->entries[i].addr + mmap->entries[i].len);
+        printf("Type: %p (", mmap->entries[i].type);
+        switch (mmap->entries[i].type) {
+        case MULTIBOOT_MEMORY_AVAILABLE:
+          printf("avail)\n");
+          break;
+        case MULTIBOOT_MEMORY_RESERVED:
+        case MULTIBOOT_MEMORY_ACPI_RECLAIMABLE:
+          printf("reserved)\n");
+          break;
+        case MULTIBOOT_MEMORY_BADRAM:
+          printf("unusable)\n");
+        }
+      }
+      break;
     }
     mb_tag = __next_tag(mb_tag);
   }
