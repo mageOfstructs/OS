@@ -20,7 +20,9 @@ int kernel_main(uint32_t *mb_info) {
 
   uint32_t kernel_base_addr;
   mb2_get_load_base_addr(mb_info, &kernel_base_addr);
+  dbg_mb2(mb_info);
   printf("Kernel loaded at %p\n", kernel_base_addr);
+  asm("cli; hlt");
 
   // setup GDTR
   GDT[0] = 0;
