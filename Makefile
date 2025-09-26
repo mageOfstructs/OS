@@ -1,5 +1,6 @@
-GCCFLAGS=-ffreestanding -m32 -g -c -masm=intel
-NASMFLAGS=-f elf32 -g
+SHARED_FLAGS=-g
+GCCFLAGS=$(SHARED_FLAGS) -ffreestanding -m32 -c -masm=intel
+NASMFLAGS=$(SHARED_FLAGS) -f elf32
 SRCFILES=$(shell ls *.{asm,c,rs} fs/*.c stdlib/printf.c | grep -P "^(?!(boot|zeroes|kernel_entry)\.asm|test_usermode\.c|user_putchar\.c).*$$")
 
 STDLIB_SRCFILES=$(wildcard stdlib/*.c)
@@ -16,6 +17,14 @@ OS.iso: full_kernel.bin isodir/boot/grub/grub.cfg
 	if ! grub-file --is-x86-multiboot2 full_kernel.bin; then echo "No multiboot2 header!" && exit 1; fi
 	cp full_kernel.bin isodir/boot/
 	grub-mkrescue -o OS.iso isodir
+
+OS_limine.iso: full_kernel.bin limine_disk/limine.cfg
+	cp $< limine_disk/
+	xorriso -as mkisofs -b limine-cd.bin -no-emul-boot \
+    -boot-load-size 4 -boot-info-table --efi-boot \
+    limine-cd-efi.bin -efi-boot-part --efi-boot-image \
+    --protective-msdos-label limine_disk -o $@
+	../limine/limine-deploy $@ # TODO: need to set this up as well!
 
 out/%.o: %.c
 	i386-elf-gcc $(GCCFLAGS) -c $< -o $@
