@@ -3,6 +3,7 @@
 #include "fs/ext2.h"
 #include "idt.h"
 #include "mem.h"
+#include "multiboot2_api.h"
 #include "pic.h"
 #include "printf.h"
 #include "serial.h"
@@ -14,9 +15,14 @@
 static uint64_t GDT[6];
 static uint8_t GDTR[6];
 
-int main() {
+int kernel_main(uint32_t *mb_info) {
   init_serial();
-  printf("Main lives at: %p", main);
+
+  uint32_t kernel_base_addr;
+  mb2_get_load_base_addr(mb_info, &kernel_base_addr);
+  dbg_mb2(mb_info);
+  printf("Kernel loaded at %p\n", kernel_base_addr);
+  asm("cli; hlt");
 
   // setup GDTR
   GDT[0] = 0;
@@ -72,7 +78,7 @@ int main() {
   printf("Got here!");
   PIC_remap(0x20, 0x28);
   idt_init();
-  setup_vm();
+  setup_vm(kernel_base_addr);
   printf("Virtual memory intialized!\n");
 
   uint16_t buf[256];

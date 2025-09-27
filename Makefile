@@ -1,12 +1,14 @@
-GCCFLAGS=-ffreestanding -m32 -g -c -masm=intel
-NASMFLAGS=-f elf32 -g
-SRCFILES=$(shell ls *.{asm,c} fs/*.c stdlib/printf.c | grep -P "^(?!(boot|zeroes|kernel_entry)\.asm|test_usermode\.c|user_putchar\.c).*$$")
+SHARED_FLAGS=-g
+GCCFLAGS=$(SHARED_FLAGS) -ffreestanding -m32 -c -masm=intel
+NASMFLAGS=$(SHARED_FLAGS) -f elf32
+SRCFILES=$(shell ls *.{asm,c,rs} fs/*.c stdlib/printf.c | grep -P "^(?!(boot|zeroes|kernel_entry)\.asm|test_usermode\.c|user_putchar\.c).*$$")
 
 STDLIB_SRCFILES=$(wildcard stdlib/*.c)
 STDLIB_OUTFILES=$(STDLIB_SRCFILES:%.c=out/%.o)
 
 tmp=$(SRCFILES:%.c=out/%.o)
-OUTFILES=$(tmp:%.asm=out/%.o)
+tmp2=$(tmp:%.rs=out/%.o)
+OUTFILES=$(tmp2:%.asm=out/%.o)
 
 qemu: OS.iso testdisk.img
 	qemu-system-i386 -cdrom "$<" -m 1G -chardev file,id=klog,path=./kernel.log -serial chardev:klog -drive file=./testdisk.img,format=raw,index=0
@@ -16,6 +18,14 @@ OS.iso: full_kernel.bin isodir/boot/grub/grub.cfg
 	cp full_kernel.bin isodir/boot/
 	grub-mkrescue -o OS.iso isodir
 
+OS_limine.iso: full_kernel.bin limine_disk/limine.cfg
+	cp $< limine_disk/
+	xorriso -as mkisofs -b limine-cd.bin -no-emul-boot \
+    -boot-load-size 4 -boot-info-table --efi-boot \
+    limine-cd-efi.bin -efi-boot-part --efi-boot-image \
+    --protective-msdos-label limine_disk -o $@
+	../limine/limine-deploy $@ # TODO: need to set this up as well!
+
 out/%.o: %.c
 	i386-elf-gcc $(GCCFLAGS) -c $< -o $@
 out/stdlib/%.o: stdlib/%.c
@@ -23,6 +33,9 @@ out/stdlib/%.o: stdlib/%.c
 
 out/%.o: %.asm
 	nasm $< $(NASMFLAGS) -o $@
+
+out/%.o: %.rs
+	rustc $< --target x86_64-unknown-none --emit obj -o $@
 
 boot.bin: full_kernel.bin boot.asm
 	@echo Kernel size: $(shell bc <<< "$$(du -b $< | cut -f1) / 512 + 1")

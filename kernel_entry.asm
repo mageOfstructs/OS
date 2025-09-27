@@ -1,5 +1,5 @@
 [bits 32]
-[extern main]
+[extern kernel_main]
 
 MH_MAGIC equ 0xE85250D6
 MH_ARCH equ 0
@@ -12,8 +12,6 @@ dd MH_ARCH                                 ; 32 bit i386
 dd MH_SZ                                   ; header length
 dd -(MH_MAGIC + MH_ARCH + MH_SZ)
 
-
-
 entry_tag:
 dw 3
 dw 0
@@ -22,6 +20,13 @@ dd kernel_entry
 dd 0
 entry_tag_end:
 
+inforeq_tag:
+dw 1
+dw 0
+dd inforeq_tag_end - inforeq_tag
+dd 9 ; elf sections
+dd 6 ; mmap
+inforeq_tag_end:
 
 ; end tag
 dd 0
@@ -35,11 +40,14 @@ stack_top:
 
 section .text
 global _start
+global start
+start:
 _start:
 kernel_entry:
 
 mov esp, stack_top
-call main
+push ebx
+call kernel_main
 
 loop:
 hlt

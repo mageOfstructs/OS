@@ -1,14 +1,74 @@
 #include "multiboot2.h"
 #include "math.h"
+#include "log.h"
+#include <stdbool.h>
 #include <stdint.h>
 
 typedef struct multiboot_tag multiboot_tag_t;
+typedef struct multiboot_tag_elf_sections multiboot_tag_elf_sections_t;
 
+static inline multiboot_tag_t *__next_tag(multiboot_tag_t *mb_tag) {
+  return (void *)mb_tag + pad(mb_tag->size, 8);
+}
+static inline bool __tags_not_done(uint32_t total_sz, uint32_t *info_start,
+                                   multiboot_tag_t *cur_tag) {
+  return cur_tag->type != MULTIBOOT_TAG_TYPE_END &&
+         total_sz > ((uint32_t *)cur_tag - info_start);
+}
 void dbg_mb2(uint32_t *mb_info) {
   uint32_t total_sz = *mb_info;
   multiboot_tag_t *mb_tag = (multiboot_tag_t *)(mb_info + 2);
-  while (mb_tag->type != MULTIBOOT_TAG_TYPE_END) {
-    switch (mb_tag->type) {}
-    mb_tag = (void *)mb_tag + pad(mb_tag->size, 8);
+  while (__tags_not_done(total_sz, mb_info, mb_tag)) {
+    log("Enountered type: %d\n", mb_tag->type);
+    switch (mb_tag->type) {
+    case MULTIBOOT_TAG_TYPE_ELF_SECTIONS:;
+      multiboot_tag_elf_sections_t *mb_elf =
+          (multiboot_tag_elf_sections_t *)mb_tag;
+      log("Found ELF Sections!\n");
+      log("Number of entries: %d\n", mb_elf->num);
+      break;
+    case MULTIBOOT_TAG_TYPE_LOAD_BASE_ADDR:
+      log("kernel loaded at %p!\n",
+          ((struct multiboot_tag_load_base_addr *)mb_tag)->load_base_addr);
+      break;
+    case MULTIBOOT_TAG_TYPE_MMAP:;
+      struct multiboot_tag_mmap *mmap = (struct multiboot_tag_mmap *)mb_tag;
+      if (mmap->entry_version != 0) {
+        warn("unknown mmap entry version: %d\n", mmap->entry_version);
+      }
+      printf("RAM Sections:\n");
+      for (int i = 0; i < (mmap->size - 16) / mmap->entry_size; i++) {
+        printf("Section %p-", mmap->entries[i].addr);
+        printf("%p; ", mmap->entries[i].addr + mmap->entries[i].len);
+        printf("Type: %p (", mmap->entries[i].type);
+        switch (mmap->entries[i].type) {
+        case MULTIBOOT_MEMORY_AVAILABLE:
+          printf("avail)\n");
+          break;
+        case MULTIBOOT_MEMORY_RESERVED:
+        case MULTIBOOT_MEMORY_ACPI_RECLAIMABLE:
+          printf("reserved)\n");
+          break;
+        case MULTIBOOT_MEMORY_BADRAM:
+          printf("unusable)\n");
+        }
+      }
+      break;
+    }
+    mb_tag = __next_tag(mb_tag);
   }
+}
+
+int mb2_get_load_base_addr(uint32_t *mb_info, uint32_t *ret) {
+  uint32_t total_sz = *mb_info;
+  multiboot_tag_t *mb_tag = (multiboot_tag_t *)(mb_info + 2);
+  while (__tags_not_done(total_sz, mb_info, mb_tag)) {
+    switch (mb_tag->type) {
+    case MULTIBOOT_TAG_TYPE_LOAD_BASE_ADDR:
+      *ret = ((struct multiboot_tag_load_base_addr *)mb_tag)->load_base_addr;
+      return 0;
+    }
+    mb_tag = __next_tag(mb_tag);
+  }
+  return -1;
 }
