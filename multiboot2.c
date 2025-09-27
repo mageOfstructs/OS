@@ -1,6 +1,6 @@
 #include "multiboot2.h"
-#include "math.h"
 #include "log.h"
+#include "math.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -16,6 +16,7 @@ static inline bool __tags_not_done(uint32_t total_sz, uint32_t *info_start,
          total_sz > ((uint32_t *)cur_tag - info_start);
 }
 void dbg_mb2(uint32_t *mb_info) {
+  log("&mb_info: %p\n", mb_info);
   uint32_t total_sz = *mb_info;
   multiboot_tag_t *mb_tag = (multiboot_tag_t *)(mb_info + 2);
   while (__tags_not_done(total_sz, mb_info, mb_tag)) {
