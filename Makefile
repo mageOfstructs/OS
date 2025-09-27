@@ -10,6 +10,9 @@ tmp=$(SRCFILES:%.c=out/%.o)
 tmp2=$(tmp:%.rs=out/%.o)
 OUTFILES=$(tmp2:%.asm=out/%.o)
 
+qemu_limine: OS_limine.iso testdisk.img
+	qemu-system-i386 -cdrom "$<" -m 1G -chardev file,id=klog,path=./kernel.log -serial chardev:klog -drive file=./testdisk.img,format=raw,index=0
+
 qemu: OS.iso testdisk.img
 	qemu-system-i386 -cdrom "$<" -m 1G -chardev file,id=klog,path=./kernel.log -serial chardev:klog -drive file=./testdisk.img,format=raw,index=0
 
@@ -18,8 +21,9 @@ OS.iso: full_kernel.bin isodir/boot/grub/grub.cfg
 	cp full_kernel.bin isodir/boot/
 	grub-mkrescue -o OS.iso isodir
 
-OS_limine.iso: full_kernel.bin limine_disk/limine.cfg limine/limine-deploy
-	cp $< limine_disk/
+OS_limine.iso: full_kernel.bin limine_disk/limine.cfg limine/limine-deploy limine_disk/limine-cd.bin limine_disk/limine-cd-efi.bin
+	mkdir -p limine_disk/boot
+	cp $< limine_disk/boot
 	xorriso -as mkisofs -b limine-cd.bin -no-emul-boot \
     -boot-load-size 4 -boot-info-table --efi-boot \
     limine-cd-efi.bin -efi-boot-part --efi-boot-image \
@@ -31,6 +35,11 @@ limine/limine-deploy:
 	  git clone https://github.com/limine-bootloader/limine.git --branch=v3.0-branch-binary --depth=1; \
 	fi
 	$(MAKE) -C limine limine-deploy
+
+limine_disk/limine-cd.bin: limine/limine-deploy
+	cp limine/limine-cd.bin $@
+limine_disk/limine-cd-efi.bin: limine/limine-deploy
+	cp limine/limine-cd-efi.bin $@
 
 out/%.o: %.c
 	i386-elf-gcc $(GCCFLAGS) -c $< -o $@
