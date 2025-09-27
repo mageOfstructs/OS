@@ -15,14 +15,19 @@
 static uint64_t GDT[6];
 static uint8_t GDTR[6];
 
+extern void start(void);
+
 int kernel_main(uint32_t *mb_info) {
   init_serial();
 
   uint32_t kernel_base_addr;
-  mb2_get_load_base_addr(mb_info, &kernel_base_addr);
   dbg_mb2(mb_info);
+  if (mb2_get_load_base_addr(mb_info, &kernel_base_addr)) {
+    warn("Could not get kba from mb_info! Fallback to manual detection...\n");
+    kernel_base_addr = (uint32_t)start;
+  }
   printf("Kernel loaded at %p\n", kernel_base_addr);
-  asm("cli; hlt");
+  // asm("cli; hlt");
 
   // setup GDTR
   GDT[0] = 0;
