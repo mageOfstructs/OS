@@ -11,7 +11,10 @@ tmp2=$(tmp:%.rs=out/%.o)
 OUTFILES=$(tmp2:%.asm=out/%.o)
 
 qemu_limine: OS_limine.iso testdisk.img
-	qemu-system-i386 -cdrom "$<" -m 1G -chardev file,id=klog,path=./kernel.log -serial chardev:klog -drive file=./testdisk.img,format=raw,index=0
+	./run_qemu.sh "$<"
+
+debug: OS_limine.iso testdisk.img
+	./run_qemu.sh "$<" -S -s
 
 qemu: OS.iso testdisk.img
 	qemu-system-i386 -cdrom "$<" -m 1G -chardev file,id=klog,path=./kernel.log -serial chardev:klog -drive file=./testdisk.img,format=raw,index=0
