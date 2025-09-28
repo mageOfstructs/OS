@@ -100,7 +100,10 @@ void sys_fork(proc_ctx_t *ctx) {
 
 // TODO: exit code
 void sys_exit() {
+  // FIXME: I have a feeling that this is the place where bad things happen
+  // If the timer fires while we are here (i.e. have set the current state to
+  // DEAD but not switched ctxs yet, it may be that it mistakes the invalid
+  // state and calls proc_hlt)
   myproc()->state = DEAD;
-  // rm_curproc();
   dispatch(schedule());
 }
