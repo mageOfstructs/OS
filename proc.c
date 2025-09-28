@@ -1,12 +1,12 @@
 #include "proc.h"
 #include "fildes.h"
+#include "llist.h"
+#include "log.h"
 #include "malloc.h"
 #include "math.h"
+#include "usermode.h"
 #include "utils.h"
 #include "vio.h"
-#include "log.h"
-#include "llist.h"
-#include "usermode.h"
 #include "vm.h"
 #include <stdint.h>
 
@@ -109,9 +109,17 @@ void dbg_ctx(proc_ctx_t *ctx) {
   printf("CS: %p\n", ctx->cs);
 }
 
+static int dispatch_lock = 0;
 void dispatch(llist_node_proc_t *new_proc) {
+  if (dispatch_lock > 0)
+    return;
+  dispatch_lock++;
   if (!new_proc)
     proc_hlt();
+  if (curproc == new_proc) {
+    dispatch_lock--;
+    return;
+  }
   void *old_proc_addr_sp = curproc->val.ctx.addr_sp;
 
   curproc = new_proc;
@@ -136,6 +144,7 @@ void dispatch(llist_node_proc_t *new_proc) {
   log("New context:\n");
   dbg_ctx(&new_proc->val.ctx);
   log("Switching to proc %d\n", curproc->val.pid);
+  dispatch_lock--;
   ctx_switch(new_ctx);
 }
 
@@ -151,14 +160,17 @@ void switch_proc(llist_node_proc_t *new_proc, proc_ctx_t *old_ctx) {
 
 llist_node_proc_t *schedule() {
   if (PLIST.sz < 2)
-    return NULL;
+    return curproc;
   llist_node_proc_t *new_proc = curproc;
+  bool should_halt = true;
   do {
+    if (new_proc->val.state != DEAD)
+      should_halt = false;
     new_proc = new_proc->next;
     if (!new_proc)
       new_proc = PLIST.head;
   } while (new_proc->val.state != WAITING && new_proc != curproc);
-  if (new_proc->val.state == WAITING) {
+  if (new_proc->val.state == WAITING && !should_halt) {
     return new_proc;
   }
   return NULL;
